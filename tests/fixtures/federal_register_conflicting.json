@@ -1,0 +1,23 @@
+{
+  "count": 2,
+  "results": [
+    {
+      "document_number": "2025-99991",
+      "title": "Airspace Designations Amendment A",
+      "action": "Final rule",
+      "publication_date": "2025-08-01",
+      "effective_on": "2025-09-15",
+      "canonical_url": "https://www.federalregister.gov/documents/2025/08/01/2025-99991/airspace-a",
+      "abstract": "Incorporates FAA Order JO 7400.11K effective 2025-09-15."
+    },
+    {
+      "document_number": "2025-99992",
+      "title": "Airspace Designations Amendment B (Contradictory)",
+      "action": "Final rule",
+      "publication_date": "2025-08-05",
+      "effective_on": "2025-09-15",
+      "canonical_url": "https://www.federalregister.gov/documents/2025/08/05/2025-99992/airspace-b",
+      "abstract": "Delays applicability of 7400.11K and reinstates Edition J indefinitely."
+    }
+  ]
+}
