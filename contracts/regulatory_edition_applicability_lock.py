@@ -3,6 +3,7 @@
 from genlayer import *
 import hashlib
 import json
+import re
 from datetime import datetime
 
 
@@ -292,8 +293,8 @@ class RegulatoryEditionApplicabilityLock(gl.Contract):
 
         def evaluate() -> dict:
             source_statuses = {}
+            versions_url = f"https://www.ecfr.gov/api/versioner/v1/versions/title-14.json?issue_date[on]={activity_date}"
             ecfr_url = f"https://www.ecfr.gov/api/versioner/v1/full/{activity_date}/title-14.xml?part={part}"
-            fr_query_url = f"https://www.federalregister.gov/api/v1/documents.json?conditions[cfr][title]=14&conditions[cfr][part]={part}&conditions[term]=7400.11&conditions[type][]=RULE"
 
             def _handle_source_err(url: str, err_msg: str) -> dict:
                 is_429 = "429" in err_msg
@@ -324,21 +325,66 @@ class RegulatoryEditionApplicabilityLock(gl.Contract):
                     "source_statuses": source_statuses,
                 }
 
-            try:
-                ecfr_text = gl.nondet.web.render(ecfr_url, mode="text")[:24000]
-                if any(err_sig in ecfr_text for err_sig in ("404 Not Found", "429 Too Many", "500 Internal", "501 Not Implemented", "502 Bad Gateway", "503 Service", "504 Gateway", "599 Network")):
-                    return _handle_source_err(ecfr_url, ecfr_text[:100])
-                source_statuses[ecfr_url] = "HTTP_200"
-            except Exception as e:
-                return _handle_source_err(ecfr_url, str(e))
+            def _fetch(url: str, limit: int = 24000):
+                try:
+                    body = gl.nondet.web.render(url, mode="text")
+                    if any(sig in body for sig in ("404 Not Found", "429 Too Many", "500 Internal", "501 Not Implemented", "502 Bad Gateway", "503 Service", "504 Gateway", "599 Network")):
+                        return None, _handle_source_err(url, body[:100])
+                    if len(body) > limit:
+                        return None, _handle_source_err(url, "OVERSIZE_RESPONSE")
+                    source_statuses[url] = "HTTP_200"
+                    return body, None
+                except Exception as exc:
+                    return None, _handle_source_err(url, str(exc))
 
+            versions_text, source_error = _fetch(versions_url)
+            if source_error is not None:
+                return source_error
+            ecfr_text, source_error = _fetch(ecfr_url)
+            if source_error is not None:
+                return source_error
             try:
-                fr_text = gl.nondet.web.render(fr_query_url, mode="text")[:24000]
-                if any(err_sig in fr_text for err_sig in ("404 Not Found", "429 Too Many", "500 Internal", "501 Not Implemented", "502 Bad Gateway", "503 Service", "504 Gateway", "599 Network")):
-                    return _handle_source_err(fr_query_url, fr_text[:100])
-                source_statuses[fr_query_url] = "HTTP_200"
-            except Exception as e:
-                return _handle_source_err(fr_query_url, str(e))
+                version_payload = json.loads(versions_text)
+                versions = version_payload.get("content_versions", version_payload.get("versions", []))
+                if not isinstance(versions, list) or not versions:
+                    raise gl.vm.UserError("MISSING_AUTHORITY_METADATA")
+            except Exception:
+                return _handle_source_err(versions_url, "MALFORMED_VERSION_METADATA")
+
+            document_numbers = sorted(set(re.findall(r"\b20\d{2}-\d{4,6}\b", ecfr_text)))
+            if DESIGNATION_FAMILY in ecfr_text and (not document_numbers or len(document_numbers) > MAX_AUTHORITY_DOCS):
+                return _handle_source_err(ecfr_url, "UNBOUNDED_AUTHORITY_LINEAGE")
+
+            exact_documents = []
+            for document_number in document_numbers:
+                fr_query_url = f"https://www.federalregister.gov/api/v1/documents.json?conditions[cfr][title]=14&conditions[cfr][part]={part}&conditions[term]={document_number}&conditions[type][]=RULE&per_page=4&order=newest"
+                fr_search_text, source_error = _fetch(fr_query_url, 12000)
+                if source_error is not None:
+                    return source_error
+                try:
+                    search_payload = json.loads(fr_search_text)
+                    results = search_payload["results"]
+                    count = int(search_payload["count"])
+                    if count > len(results) or len(results) > 4 or not any(str(item.get("document_number", "")) == document_number for item in results):
+                        return _handle_source_err(fr_query_url, "INCOMPLETE_EXACT_CITATION_QUERY")
+                except Exception:
+                    return _handle_source_err(fr_query_url, "MALFORMED_AUTHORITY_INDEX")
+                exact_url = f"https://www.federalregister.gov/api/v1/documents/{document_number}.json"
+                exact_text, source_error = _fetch(exact_url, 12000)
+                if source_error is not None:
+                    return source_error
+                try:
+                    exact_doc = json.loads(exact_text)
+                    if isinstance(exact_doc.get("results"), list):
+                        exact_doc = next((item for item in exact_doc["results"] if str(item.get("document_number", "")) == document_number), {})
+                    if str(exact_doc.get("document_number", "")) != document_number:
+                        raise gl.vm.UserError("DOCUMENT_IDENTITY_MISMATCH")
+                    exact_documents.append(exact_doc)
+                except Exception:
+                    return _handle_source_err(exact_url, "MALFORMED_EXACT_DOCUMENT")
+
+            versions_evidence = json.dumps(version_payload, sort_keys=True)
+            fr_text = json.dumps(exact_documents, sort_keys=True)
 
             section_fingerprint = hashlib.sha256(ecfr_text.encode("utf-8")).hexdigest()
 
@@ -365,6 +411,10 @@ Rules:
 <ECFR_EVIDENCE>
 {ecfr_text}
 </ECFR_EVIDENCE>
+
+<ECFR_VERSION_METADATA>
+{versions_evidence}
+</ECFR_VERSION_METADATA>
 
 <FR_EVIDENCE>
 {fr_text}
@@ -436,8 +486,10 @@ Return exactly one JSON object with:
                     and leader["effective_from"] == own["effective_from"]
                     and leader["effective_to"] == own["effective_to"]
                     and leader["ecfr_date"] == own["ecfr_date"]
+                    and leader["ecfr_section_fingerprint"] == own["ecfr_section_fingerprint"]
                     and leader["reason_code"] == own["reason_code"]
                     and leader["authority_documents"] == own["authority_documents"]
+                    and leader["source_statuses"] == own["source_statuses"]
                 )
             except Exception:
                 return False

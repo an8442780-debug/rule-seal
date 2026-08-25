@@ -10,6 +10,7 @@ FIXTURES_DIR = Path(__file__).parents[1] / "fixtures"
 ECFR_2025_XML = (FIXTURES_DIR / "ecfr_title14_part71_2025_09_15.xml").read_text(encoding="utf-8")
 ECFR_2024_XML = (FIXTURES_DIR / "ecfr_title14_part71_2024_09_15.xml").read_text(encoding="utf-8")
 ECFR_NO_REF_XML = (FIXTURES_DIR / "ecfr_title14_part71_no_reference.xml").read_text(encoding="utf-8")
+ECFR_INITIAL_DELAYED_XML = (FIXTURES_DIR / "ecfr_title14_part71_initial_reference_delayed.xml").read_text(encoding="utf-8")
 FR_2025_JSON = (FIXTURES_DIR / "federal_register_2025_16493.json").read_text(encoding="utf-8")
 FR_2024_JSON = (FIXTURES_DIR / "federal_register_2024_19448.json").read_text(encoding="utf-8")
 FR_CONFLICT_JSON = (FIXTURES_DIR / "federal_register_conflicting.json").read_text(encoding="utf-8")
@@ -157,7 +158,7 @@ def test_outcome_edition_applies_and_boundaries(direct_deploy, direct_vm, direct
     assert baseline["authority_documents"][0]["document_number"] == "2025-16493"
 
 
-def test_outcome_not_yet_effective_boundary(direct_deploy, direct_vm, direct_alice):
+def test_edition_j_applies_one_day_before_k_boundary(direct_deploy, direct_vm, direct_alice):
     warp(direct_vm, "2026-08-25T12:00:00+00:00")
     contract = direct_deploy(CONTRACT_FILE)
 
@@ -165,27 +166,27 @@ def test_outcome_not_yet_effective_boundary(direct_deploy, direct_vm, direct_ali
     case_id = contract.create_case("nonce-not-yet-1", "71", "71.1", "2025-09-14", "FAA Order JO 7400.11")
     contract.freeze_case(case_id)
 
-    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_2025_XML})
-    direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": FR_2025_JSON})
+    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_2024_XML})
+    direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": FR_2024_JSON})
 
     llm_resp = {
         "schema_version": "1.0.0",
-        "outcome": "NOT_YET_EFFECTIVE",
+        "outcome": "EDITION_APPLIES",
         "standard_body": "FAA",
         "designation_family": "FAA Order JO 7400.11",
-        "edition": "FAA Order JO 7400.11K",
-        "effective_from": "2025-09-15",
-        "effective_to": "",
+        "edition": "FAA Order JO 7400.11J",
+        "effective_from": "2024-09-15",
+        "effective_to": "2025-09-15",
         "ecfr_date": "2025-09-14",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points",
-                "document_number": "2025-16493",
-                "effective_on": "2025-09-15",
-                "publication_date": "2025-08-20",
+                "canonical_url": "https://www.federalregister.gov/documents/2024/08/22/2024-19448/airspace-designations-and-reporting-points",
+                "document_number": "2024-19448",
+                "effective_on": "2024-09-15",
+                "publication_date": "2024-08-22",
             }
         ],
-        "reason_code": "ACTIVITY_DATE_BEFORE_EFFECTIVE",
+        "reason_code": "ANNUAL_EDITION_APPLIES",
     }
     direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(llm_resp))
 
@@ -193,11 +194,26 @@ def test_outcome_not_yet_effective_boundary(direct_deploy, direct_vm, direct_ali
     assert direct_vm.run_validator() is True
 
     case_data = json.loads(contract.get_case(case_id))
-    assert case_data["state"] == "NOT_APPLICABLE"
+    assert case_data["state"] == "LOCKED"
+    assert json.loads(contract.get_applicable_baseline(case_id))["edition"] == "FAA Order JO 7400.11J"
 
-    # get_applicable_baseline must revert on NOT_APPLICABLE
-    with direct_vm.expect_revert("CASE_NOT_LOCKED"):
-        contract.get_applicable_baseline(case_id)
+
+def test_not_yet_effective_when_no_prior_bound_edition(direct_deploy, direct_vm, direct_alice):
+    contract = direct_deploy(CONTRACT_FILE)
+    case_id = contract.create_case("nonce-initial-delay", "71", "71.1", "2025-09-14", "FAA Order JO 7400.11")
+    contract.freeze_case(case_id)
+    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_INITIAL_DELAYED_XML})
+    direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": FR_2025_JSON})
+    response = {
+        "schema_version": "1.0.0", "outcome": "NOT_YET_EFFECTIVE", "standard_body": "FAA",
+        "designation_family": "FAA Order JO 7400.11", "edition": "FAA Order JO 7400.11K",
+        "effective_from": "2025-09-15", "effective_to": "", "ecfr_date": "2025-09-14",
+        "authority_documents": [{"canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points", "document_number": "2025-16493", "effective_on": "2025-09-15", "publication_date": "2025-08-20"}],
+        "reason_code": "ACTIVITY_DATE_BEFORE_EFFECTIVE",
+    }
+    direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(response))
+    contract.assess_case(case_id)
+    assert json.loads(contract.get_case(case_id))["state"] == "NOT_APPLICABLE"
 
 
 def test_outcome_superseded_for_date(direct_deploy, direct_vm, direct_alice):
@@ -606,7 +622,8 @@ def test_source_error_semantics_and_ambiguity(direct_deploy, direct_vm, direct_a
     case_conflict_id = contract.create_case("nonce-conflict-1", "71", "71.1", "2025-10-02", "FAA Order JO 7400.11")
     contract.freeze_case(case_conflict_id)
     direct_vm.clear_mocks()
-    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_2025_XML})
+    conflict_ecfr = ECFR_2025_XML.replace("FAA-2025-16493", "2025-99991 and 2025-99992")
+    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": conflict_ecfr})
     direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": FR_CONFLICT_JSON})
     llm_conflict = {
         "schema_version": "1.0.0",
@@ -630,7 +647,8 @@ def test_source_error_semantics_and_ambiguity(direct_deploy, direct_vm, direct_a
     case_savings_id = contract.create_case("nonce-savings-1", "71", "71.1", "2025-10-03", "FAA Order JO 7400.11")
     contract.freeze_case(case_savings_id)
     direct_vm.clear_mocks()
-    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_2025_XML})
+    savings_ecfr = ECFR_2025_XML.replace("FAA-2025-16493", "FAA-2025-99993")
+    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": savings_ecfr})
     direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": FR_SAVINGS_JSON})
     llm_savings = {
         "schema_version": "1.0.0",
@@ -862,3 +880,50 @@ def test_prompt_injection_in_ecfr_evidence_rejected(direct_deploy, direct_vm, di
     }
     # EDITION_APPLIES with empty authority_documents violates validation rules
     assert direct_vm.run_validator(leader_result=malicious_resp) is False
+
+
+def test_authoritative_fetch_chain_uses_exact_document(direct_deploy, direct_vm, direct_alice):
+    contract = direct_deploy(CONTRACT_FILE)
+    case_id = contract.create_case("nonce-authority-chain", "71", "71.1", "2025-09-15", "FAA Order JO 7400.11")
+    contract.freeze_case(case_id)
+    exact_doc = json.dumps(json.loads(FR_2025_JSON)["results"][0])
+    direct_vm.mock_web(r"/full/2025-09-15/title-14\.xml", {"status": 200, "body": ECFR_2025_XML})
+    direct_vm.mock_web(r"documents\.json\?.*term.*2025-16493.*per_page=4", {"status": 200, "body": FR_2025_JSON})
+    direct_vm.mock_web(r"/api/v1/documents/2025-16493\.json$", {"status": 200, "body": exact_doc})
+    response = {
+        "schema_version": "1.0.0", "outcome": "EDITION_APPLIES", "standard_body": "FAA",
+        "designation_family": "FAA Order JO 7400.11", "edition": "FAA Order JO 7400.11K",
+        "effective_from": "2025-09-15", "effective_to": "", "ecfr_date": "2025-09-15",
+        "authority_documents": [{"canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points", "document_number": "2025-16493", "effective_on": "2025-09-15", "publication_date": "2025-08-20"}],
+        "reason_code": "ANNUAL_EDITION_APPLIES",
+    }
+    direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(response))
+    contract.assess_case(case_id)
+    assert json.loads(contract.get_case(case_id))["state"] == "LOCKED"
+    assert {0, 1, 2, 3}.issubset(direct_vm._web_mocks_hit)
+
+
+def test_incomplete_pagination_fails_closed(direct_deploy, direct_vm, direct_alice):
+    contract = direct_deploy(CONTRACT_FILE)
+    case_id = contract.create_case("nonce-page", "71", "71.1", "2025-09-15", "FAA Order JO 7400.11")
+    contract.freeze_case(case_id)
+    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_2025_XML})
+    incomplete = json.dumps({"count": 2, "results": [json.loads(FR_2025_JSON)["results"][0]]})
+    direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": incomplete})
+    contract.assess_case(case_id)
+    assessment = json.loads(contract.get_assessment(f"{case_id}-A01"))
+    assert assessment["outcome"] == "UNRESOLVED"
+    assert assessment["reason_code"] == "UPSTREAM_SOURCE_UNAVAILABLE"
+
+
+def test_missing_exact_document_fails_closed(direct_deploy, direct_vm, direct_alice):
+    contract = direct_deploy(CONTRACT_FILE)
+    case_id = contract.create_case("nonce-exact-404", "71", "71.1", "2025-09-15", "FAA Order JO 7400.11")
+    contract.freeze_case(case_id)
+    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_2025_XML})
+    direct_vm.mock_web(r"documents\.json", {"status": 200, "body": FR_2025_JSON})
+    direct_vm.mock_web(r"/api/v1/documents/2025-16493\.json$", {"status": 404, "body": "404 Not Found"})
+    contract.assess_case(case_id)
+    assessment = json.loads(contract.get_assessment(f"{case_id}-A01"))
+    assert assessment["outcome"] == "UNRESOLVED"
+    assert assessment["reason_code"] == "UPSTREAM_HISTORICAL_DATA_UNAVAILABLE"
