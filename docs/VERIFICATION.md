@@ -2,6 +2,20 @@
 
 This document defines the formal verification procedures, automated test matrices, and validator consensus rules for the **Regulatory Edition Applicability Lock** project.
 
+## Release identity
+
+- Deployed source commit: `b4aff7156b03dc040eb298290f276057cce47359`
+- POST_DEPLOY_TEST evidence commit: `93a1466d99bb40218220f8646719c78ea4e3003f`
+- Contract SHA-256: `E6466FDED2D1FF2195E4710AB78FD35DEFFF1F51EF97953B791853BE7E284B23`
+- Studionet contract: `0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae`
+- Deployment transaction: `0xd0589df3c0ccfacd875895362d61028b6a678381b6a94caac40dd8861464d695`
+- Explorer: `https://explorer-studio.genlayer.com/address/0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae`
+- Repository: `https://github.com/an8442780-debug/regulatory-edition-applicability-lock`
+- Production web: `https://regulatory-edition-applicability-lo.vercel.app`
+- Vercel deployment ID: `dpl_HiiLqcvBEjnJfUytgjyBxoJon5px` (`Ready`)
+
+Production smoke verification confirmed the expected project title, no deployment-configuration warning, a four-case public read, exact `REAL-000001` assessment/authority/source-status readback, all six advertised workbench tabs, a passive supported-wallet chooser, and no browser console error. Mandatory user-executed independent-wallet writes remain a later release gate.
+
 ---
 
 ## 1. Automated Intelligent Contract Verification

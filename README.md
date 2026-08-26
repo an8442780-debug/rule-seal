@@ -6,7 +6,7 @@ An evidence-bound GenLayer application that determines and immutably records whi
 
 - Studionet contract: `0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae`
 - [Studionet Explorer](https://explorer-studio.genlayer.com/address/0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae)
-- Live application: added after the exact frontend revision is deployed and verified on Vercel
+- [Live application](https://regulatory-edition-applicability-lo.vercel.app)
 
 ## Trust problem
 
@@ -117,4 +117,4 @@ The isolated same-code upgrade rehearsal preserved source parity, upgrader autho
 - Official upstream availability and validator consensus can produce `UNRESOLVED`; retries are limited to three with a one-hour cooldown.
 - Browser journals are local to the origin and browser profile; authoritative recovery always depends on the transaction hash and Studionet readback.
 - Studionet is a test network. Its state, addresses, and upgrade authority can be lost if the network or Studio account is reset.
-- The production web release and independent-wallet user E2E are required later-stage evidence and are not claimed until completed.
+- The production release is live, but final completion remains blocked until the mandatory independent-wallet user E2E and final dual review pass.

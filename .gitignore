@@ -39,6 +39,7 @@ yarn-error.log*
 Thumbs.db
 .vscode/
 .idea/
+.vercel/
 
 # Task-local coordination and governed specification files (never public)
 AGENTS.md
