@@ -12,9 +12,9 @@ This document defines the formal verification procedures, automated test matrice
 - Explorer: `https://explorer-studio.genlayer.com/address/0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae`
 - Repository: `https://github.com/an8442780-debug/regulatory-edition-applicability-lock`
 - Production web: `https://regulatory-edition-applicability-lo.vercel.app`
-- Vercel deployment ID: `dpl_HiiLqcvBEjnJfUytgjyBxoJon5px` (`Ready`)
+- Vercel deployment ID: `dpl_Gw5x3eVK1nByQLB2kGw5DYdKxjZz` (`Ready`)
 
-Production smoke verification confirmed the expected project title, no deployment-configuration warning, a four-case public read, exact `REAL-000001` assessment/authority/source-status readback, all six advertised workbench tabs, a passive supported-wallet chooser, and no browser console error. Mandatory user-executed independent-wallet writes remain a later release gate.
+Production E2E used OKX account `0x5be59b33326772376a01e96e525d6d18fc821113`. It created `REAL-000005`, recovered the submitted write after reload, froze and assessed the case to `LOCKED`, bound integration namespace `vercel-e2e-5be51113`, and verified auditor events `EVT-000015` through `EVT-000018`. Finalized transactions were `0x7b11d3e008f528d9c8718943c415ba8c0434292a02b94b85e1480d387a5e9a9f`, `0xd7b44e450f0961fff4c2d6bf07c9a6d0a06f4ccbe251947e3f1493e59b2d9a72`, `0x3ed6ba14d5996de5a5bb874a9bf57742f1dfba21a520ea0a8a70d25a75c7a7bf`, and `0xd65edd099100511f395c76493dfac16db9a256c8f7d2a5bcbd02408b11538796`.
 
 ---
 
@@ -76,13 +76,13 @@ npm test
 | `wallet.test.ts` | Provider connection and lifecycle | Exact-provider connection, address/chain state, deduplication, legacy replacement, listener cleanup, and add-then-switch behavior. |
 | `journal.test.ts` | Save & retrieve pending ops | Operations persist to storage with timestamps, methods, and initial `PRE_SIGN` status. |
 | `journal.test.ts` | Update transaction hash | Hash update advances operation state to `SUBMITTED`. |
-| `journal.test.ts` | Reconciliation | A successful receipt is cleared only after a supplied method-specific authoritative state predicate succeeds; terminal failures clear safely and ambiguous writes remain locked. |
+| `journal.test.ts` | Reconciliation | Current Studionet `getTransaction` finality is cleared only after a supplied method-specific authoritative state predicate succeeds; terminal failures clear safely and ambiguous writes remain locked. |
 | `contract.test.ts` | Read & parse case record | JSON-serialized contract state is correctly deserialized into typed `CaseRecord` domain models. |
 | `contract.test.ts` | Read & parse assessment | Authority documents, outcomes, and source statuses are parsed accurately. |
-| `contract.test.ts` | Write and receipt boundary | Exact selected-provider routing; `ACCEPTED` remains pending; only `FINALIZED` plus successful execution advances to authoritative readback. |
+| `contract.test.ts` | Write and receipt boundary | Exact selected-provider routing; `ACCEPTED` remains pending; only GenLayer `getTransaction` `FINALIZED` plus successful leader execution advances to authoritative readback. |
 | `components.test.tsx` | Mounted workflows | Real public lookup, owner, resolver, integrator, successor, auditor, wallet-dialog, and tab-shell rendering. |
 
-Current independently reproduced result: **5 files, 36 tests passed**.
+Current independently reproduced result: **5 files, 37 tests passed**.
 
 ---
 

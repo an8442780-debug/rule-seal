@@ -117,4 +117,4 @@ The isolated same-code upgrade rehearsal preserved source parity, upgrader autho
 - Official upstream availability and validator consensus can produce `UNRESOLVED`; retries are limited to three with a one-hour cooldown.
 - Browser journals are local to the origin and browser profile; authoritative recovery always depends on the transaction hash and Studionet readback.
 - Studionet is a test network. Its state, addresses, and upgrade authority can be lost if the network or Studio account is reset.
-- The production release is live, but final completion remains blocked until the mandatory independent-wallet user E2E and final dual review pass.
+- The production release and independent OKX-wallet E2E are verified; final completion remains blocked only on the mandatory exact-revision dual review and submission evidence gate.
