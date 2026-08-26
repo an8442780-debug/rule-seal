@@ -10,7 +10,7 @@
 - Locked Studio deployer/upgrader: `0x34b92E6553eaCA11A00A9d86d75d8a7881779D78`
 - Intended role: deployer and Root Slot upgrader
 - Contract source: `contracts/regulatory_edition_applicability_lock.py`
-- Source SHA-256: `1C797671996C586F3D8D697351357F59C28C93443C54E9B69B5E2AFEFBBBBC6D`
+- Source SHA-256: `02058B6BE35EB80476483BA7B29AB96678E44E696B4CAB8B8CBF8049CD2CC609`
 - Linked contracts: none
 - Deployment transaction/address/Explorer: pending `PRE_DEPLOY` approval; no transaction has been signed or sent
 

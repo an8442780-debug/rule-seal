@@ -30,9 +30,9 @@ py -3.13 -m pytest -q -p no:cacheprovider
 | 11 | `test_validator_disagreement_and_injection` | Simulates validator returning conflicting edition or malformed XML injection payload. | Consensus equality validation fails; assessment marked `UNRESOLVED`. |
 | 12 | `test_successor_lifecycle` | Owner proposes successor for locked case with new activity date `2026-10-01`. | Predecessor transitions to `SUPERSEDED_BY_SUCCESSOR`; new case created with `predecessor_case_id` linked. |
 | 13 | `test_integration_binding_and_advancement` | Integrator binds namespace `flight-dispatch` to locked case and later advances to successor. | Integration state recorded as `ACTIVE`; `previous_case_id` preserved upon advancement. |
-| 14–23 | Remaining outcome, schema/source hardening and runtime views | `NOT_YET_EFFECTIVE` where no prior family edition is bound; exact schemas; date-bound eCFR version metadata; citation-derived Federal Register query; exact-document fetch; missing document; incomplete pagination; HTTP failures; injection resistance; upgrade and paged views. | Every outcome remains covered; incomplete or invalid authority evidence cannot authorize a conclusive result. |
+| 14–24 | Remaining outcome, schema/source hardening and runtime views | `NOT_YET_EFFECTIVE` where no prior family edition is bound; exact schemas; date-bound eCFR version metadata; source-citation-derived Federal Register query; exact-document fetch; missing document; incomplete pagination; docket-vs-document negative control; HTTP failures; injection resistance; upgrade and paged views. | Every outcome remains covered; incomplete or invalid authority evidence cannot authorize a conclusive result. |
 
-Current independently reproduced result: **23 passed**. Some mocked failure cases emit an unmatched downstream mock warning when an earlier authority failure correctly short-circuits; warnings are retained and are not counted as extra exercised calls.
+Current independently reproduced result: **24 passed**. The suite currently reports 12 expected unused-mock warnings: five tests do not assess and therefore do not consume the autouse versions mock; the remainder are deliberate fail-fast/short-circuit cases that do not consume downstream web mocks.
 
 ---
 

@@ -7,14 +7,15 @@ import pytest
 CONTRACT_FILE = "contracts/regulatory_edition_applicability_lock.py"
 FIXTURES_DIR = Path(__file__).parents[1] / "fixtures"
 
-ECFR_2025_XML = (FIXTURES_DIR / "ecfr_title14_part71_2025_09_15.xml").read_text(encoding="utf-8")
-ECFR_2024_XML = (FIXTURES_DIR / "ecfr_title14_part71_2024_09_15.xml").read_text(encoding="utf-8")
+ECFR_2025_XML = (FIXTURES_DIR / "official_ecfr_2025_09_15_title14_section71_1.xml").read_text(encoding="utf-8")
+ECFR_2024_XML = (FIXTURES_DIR / "official_ecfr_2024_09_15_title14_section71_1.xml").read_text(encoding="utf-8")
 ECFR_NO_REF_XML = (FIXTURES_DIR / "ecfr_title14_part71_no_reference.xml").read_text(encoding="utf-8")
 ECFR_INITIAL_DELAYED_XML = (FIXTURES_DIR / "ecfr_title14_part71_initial_reference_delayed.xml").read_text(encoding="utf-8")
 FR_2025_JSON = (FIXTURES_DIR / "federal_register_2025_16493.json").read_text(encoding="utf-8")
-FR_2024_JSON = (FIXTURES_DIR / "federal_register_2024_19448.json").read_text(encoding="utf-8")
+FR_2024_JSON = (FIXTURES_DIR / "federal_register_2024_19004.json").read_text(encoding="utf-8")
 FR_CONFLICT_JSON = (FIXTURES_DIR / "federal_register_conflicting.json").read_text(encoding="utf-8")
 FR_SAVINGS_JSON = (FIXTURES_DIR / "federal_register_savings_ambiguity.json").read_text(encoding="utf-8")
+FR_2025_EXACT_JSON = (FIXTURES_DIR / "official_federal_register_2025_16493_exact.json").read_text(encoding="utf-8")
 
 
 def warp(direct_vm, timestamp):
@@ -130,10 +131,10 @@ def test_outcome_edition_applies_and_boundaries(direct_deploy, direct_vm, direct
         "ecfr_date": "2025-09-15",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points",
+                "canonical_url": "https://www.federalregister.gov/documents/2025/08/28/2025-16493/airspace-designations-incorporation-by-reference",
                 "document_number": "2025-16493",
                 "effective_on": "2025-09-15",
-                "publication_date": "2025-08-20",
+                "publication_date": "2025-08-28",
             }
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
@@ -180,10 +181,10 @@ def test_edition_j_applies_one_day_before_k_boundary(direct_deploy, direct_vm, d
         "ecfr_date": "2025-09-14",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2024/08/22/2024-19448/airspace-designations-and-reporting-points",
-                "document_number": "2024-19448",
+                "canonical_url": "https://www.federalregister.gov/documents/2024/08/26/2024-19004/airspace-designations-incorporation-by-reference",
+                "document_number": "2024-19004",
                 "effective_on": "2024-09-15",
-                "publication_date": "2024-08-22",
+                "publication_date": "2024-08-26",
             }
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
@@ -208,7 +209,7 @@ def test_not_yet_effective_when_no_prior_bound_edition(direct_deploy, direct_vm,
         "schema_version": "1.0.0", "outcome": "NOT_YET_EFFECTIVE", "standard_body": "FAA",
         "designation_family": "FAA Order JO 7400.11", "edition": "FAA Order JO 7400.11K",
         "effective_from": "2025-09-15", "effective_to": "", "ecfr_date": "2025-09-14",
-        "authority_documents": [{"canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points", "document_number": "2025-16493", "effective_on": "2025-09-15", "publication_date": "2025-08-20"}],
+        "authority_documents": [{"canonical_url": "https://www.federalregister.gov/documents/2025/08/28/2025-16493/airspace-designations-incorporation-by-reference", "document_number": "2025-16493", "effective_on": "2025-09-15", "publication_date": "2025-08-28"}],
         "reason_code": "ACTIVITY_DATE_BEFORE_EFFECTIVE",
     }
     direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(response))
@@ -237,10 +238,10 @@ def test_outcome_superseded_for_date(direct_deploy, direct_vm, direct_alice):
         "ecfr_date": "2025-10-01",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2024/08/22/2024-19448/airspace-designations-and-reporting-points",
-                "document_number": "2024-19448",
+                "canonical_url": "https://www.federalregister.gov/documents/2024/08/26/2024-19004/airspace-designations-incorporation-by-reference",
+                "document_number": "2024-19004",
                 "effective_on": "2024-09-15",
-                "publication_date": "2024-08-22",
+                "publication_date": "2024-08-26",
             }
         ],
         "reason_code": "ACTIVITY_DATE_SUPERSEDED",
@@ -335,10 +336,10 @@ def test_outcome_unresolved_and_retry_lifecycle(direct_deploy, direct_vm, direct
         "ecfr_date": "2025-10-01",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points",
+                "canonical_url": "https://www.federalregister.gov/documents/2025/08/28/2025-16493/airspace-designations-incorporation-by-reference",
                 "document_number": "2025-16493",
                 "effective_on": "2025-09-15",
-                "publication_date": "2025-08-20",
+                "publication_date": "2025-08-28",
             }
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
@@ -375,10 +376,10 @@ def test_validator_substantive_disagreement_and_injection(direct_deploy, direct_
         "ecfr_date": "2025-10-01",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points",
+                "canonical_url": "https://www.federalregister.gov/documents/2025/08/28/2025-16493/airspace-designations-incorporation-by-reference",
                 "document_number": "2025-16493",
                 "effective_on": "2025-09-15",
-                "publication_date": "2025-08-20",
+                "publication_date": "2025-08-28",
             }
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
@@ -422,10 +423,10 @@ def test_successor_creation_and_lifecycle(direct_deploy, direct_vm, direct_alice
         "ecfr_date": "2024-10-01",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2024/08/22/2024-19448/airspace-designations-and-reporting-points",
-                "document_number": "2024-19448",
+                "canonical_url": "https://www.federalregister.gov/documents/2024/08/26/2024-19004/airspace-designations-incorporation-by-reference",
+                "document_number": "2024-19004",
                 "effective_on": "2024-09-15",
-                "publication_date": "2024-08-22",
+                "publication_date": "2024-08-26",
             }
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
@@ -471,10 +472,10 @@ def test_successor_creation_and_lifecycle(direct_deploy, direct_vm, direct_alice
         "ecfr_date": "2025-10-01",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points",
+                "canonical_url": "https://www.federalregister.gov/documents/2025/08/28/2025-16493/airspace-designations-incorporation-by-reference",
                 "document_number": "2025-16493",
                 "effective_on": "2025-09-15",
-                "publication_date": "2025-08-20",
+                "publication_date": "2025-08-28",
             }
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
@@ -514,10 +515,10 @@ def test_integration_binding_and_advancement(direct_deploy, direct_vm, direct_al
         "ecfr_date": "2024-10-01",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2024/08/22/2024-19448/airspace-designations-and-reporting-points",
-                "document_number": "2024-19448",
+                "canonical_url": "https://www.federalregister.gov/documents/2024/08/26/2024-19004/airspace-designations-incorporation-by-reference",
+                "document_number": "2024-19004",
                 "effective_on": "2024-09-15",
-                "publication_date": "2024-08-22",
+                "publication_date": "2024-08-26",
             }
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
@@ -562,10 +563,10 @@ def test_integration_binding_and_advancement(direct_deploy, direct_vm, direct_al
         "ecfr_date": "2025-10-01",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points",
+                "canonical_url": "https://www.federalregister.gov/documents/2025/08/28/2025-16493/airspace-designations-incorporation-by-reference",
                 "document_number": "2025-16493",
                 "effective_on": "2025-09-15",
-                "publication_date": "2025-08-20",
+                "publication_date": "2025-08-28",
             }
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
@@ -622,7 +623,7 @@ def test_source_error_semantics_and_ambiguity(direct_deploy, direct_vm, direct_a
     case_conflict_id = contract.create_case("nonce-conflict-1", "71", "71.1", "2025-10-02", "FAA Order JO 7400.11")
     contract.freeze_case(case_conflict_id)
     direct_vm.clear_mocks()
-    conflict_ecfr = ECFR_2025_XML.replace("FAA-2025-16493", "2025-99991 and 2025-99992")
+    conflict_ecfr = ECFR_2025_XML.replace("90 FR 41890, Aug. 28, 2025", "90 FR 49991, Aug. 1, 2025").replace("FAA-2025-1763", "FAA-2025-9991")
     direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": conflict_ecfr})
     direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": FR_CONFLICT_JSON})
     llm_conflict = {
@@ -647,7 +648,7 @@ def test_source_error_semantics_and_ambiguity(direct_deploy, direct_vm, direct_a
     case_savings_id = contract.create_case("nonce-savings-1", "71", "71.1", "2025-10-03", "FAA Order JO 7400.11")
     contract.freeze_case(case_savings_id)
     direct_vm.clear_mocks()
-    savings_ecfr = ECFR_2025_XML.replace("FAA-2025-16493", "FAA-2025-99993")
+    savings_ecfr = ECFR_2025_XML.replace("90 FR 41890, Aug. 28, 2025", "90 FR 49993, Aug. 10, 2025").replace("FAA-2025-1763", "FAA-2025-9993")
     direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": savings_ecfr})
     direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": FR_SAVINGS_JSON})
     llm_savings = {
@@ -708,10 +709,10 @@ def test_extra_top_level_and_doc_keys_rejected(direct_deploy, direct_vm, direct_
         "ecfr_date": "2025-10-01",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points",
+                "canonical_url": "https://www.federalregister.gov/documents/2025/08/28/2025-16493/airspace-designations-incorporation-by-reference",
                 "document_number": "2025-16493",
                 "effective_on": "2025-09-15",
-                "publication_date": "2025-08-20",
+                "publication_date": "2025-08-28",
             }
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
@@ -732,10 +733,10 @@ def test_extra_top_level_and_doc_keys_rejected(direct_deploy, direct_vm, direct_
         **valid_resp,
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points",
+                "canonical_url": "https://www.federalregister.gov/documents/2025/08/28/2025-16493/airspace-designations-incorporation-by-reference",
                 "document_number": "2025-16493",
                 "effective_on": "2025-09-15",
-                "publication_date": "2025-08-20",
+                "publication_date": "2025-08-28",
                 "unauthorized_doc_field": "injected",
             }
         ],
@@ -763,10 +764,10 @@ def test_malformed_url_and_invalid_date_ordering_rejected(direct_deploy, direct_
         "ecfr_date": "2025-10-01",
         "authority_documents": [
             {
-                "canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points",
+                "canonical_url": "https://www.federalregister.gov/documents/2025/08/28/2025-16493/airspace-designations-incorporation-by-reference",
                 "document_number": "2025-16493",
                 "effective_on": "2025-09-15",
-                "publication_date": "2025-08-20",
+                "publication_date": "2025-08-28",
             }
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
@@ -789,7 +790,7 @@ def test_malformed_url_and_invalid_date_ordering_rejected(direct_deploy, direct_
                 "canonical_url": "https://malicious-mirror.com/documents/2025-16493",
                 "document_number": "2025-16493",
                 "effective_on": "2025-09-15",
-                "publication_date": "2025-08-20",
+                "publication_date": "2025-08-28",
             }
         ],
     }
@@ -886,15 +887,15 @@ def test_authoritative_fetch_chain_uses_exact_document(direct_deploy, direct_vm,
     contract = direct_deploy(CONTRACT_FILE)
     case_id = contract.create_case("nonce-authority-chain", "71", "71.1", "2025-09-15", "FAA Order JO 7400.11")
     contract.freeze_case(case_id)
-    exact_doc = json.dumps(json.loads(FR_2025_JSON)["results"][0])
+    exact_doc = FR_2025_EXACT_JSON
     direct_vm.mock_web(r"/full/2025-09-15/title-14\.xml", {"status": 200, "body": ECFR_2025_XML})
-    direct_vm.mock_web(r"documents\.json\?.*term.*2025-16493.*per_page=4", {"status": 200, "body": FR_2025_JSON})
+    direct_vm.mock_web(r"documents\.json\?.*FAA-2025-1763.*2025-08-28.*per_page=4", {"status": 200, "body": FR_2025_JSON})
     direct_vm.mock_web(r"/api/v1/documents/2025-16493\.json$", {"status": 200, "body": exact_doc})
     response = {
         "schema_version": "1.0.0", "outcome": "EDITION_APPLIES", "standard_body": "FAA",
         "designation_family": "FAA Order JO 7400.11", "edition": "FAA Order JO 7400.11K",
         "effective_from": "2025-09-15", "effective_to": "", "ecfr_date": "2025-09-15",
-        "authority_documents": [{"canonical_url": "https://www.federalregister.gov/documents/2025/08/20/2025-16493/airspace-designations-and-reporting-points", "document_number": "2025-16493", "effective_on": "2025-09-15", "publication_date": "2025-08-20"}],
+        "authority_documents": [{"canonical_url": "https://www.federalregister.gov/documents/2025/08/28/2025-16493/airspace-designations-incorporation-by-reference", "document_number": "2025-16493", "effective_on": "2025-09-15", "publication_date": "2025-08-28"}],
         "reason_code": "ANNUAL_EDITION_APPLIES",
     }
     direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(response))
@@ -927,3 +928,23 @@ def test_missing_exact_document_fails_closed(direct_deploy, direct_vm, direct_al
     assessment = json.loads(contract.get_assessment(f"{case_id}-A01"))
     assert assessment["outcome"] == "UNRESOLVED"
     assert assessment["reason_code"] == "UPSTREAM_HISTORICAL_DATA_UNAVAILABLE"
+
+
+def test_docket_number_is_not_treated_as_federal_register_document_number(direct_deploy, direct_vm, direct_alice):
+    contract = direct_deploy(CONTRACT_FILE)
+    case_id = contract.create_case("nonce-docket-not-doc", "71", "71.1", "2025-09-15", "FAA Order JO 7400.11")
+    contract.freeze_case(case_id)
+    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_2025_XML})
+    direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": FR_2025_JSON})
+    response = {
+        "schema_version": "1.0.0", "outcome": "EDITION_APPLIES", "standard_body": "FAA",
+        "designation_family": "FAA Order JO 7400.11", "edition": "FAA Order JO 7400.11K",
+        "effective_from": "2025-09-15", "effective_to": "", "ecfr_date": "2025-09-15",
+        "authority_documents": [{"canonical_url": "https://www.federalregister.gov/documents/FAA-2025-1763", "document_number": "FAA-2025-1763", "effective_on": "2025-09-15", "publication_date": "2025-08-28"}],
+        "reason_code": "ANNUAL_EDITION_APPLIES",
+    }
+    direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(response))
+    contract.assess_case(case_id)
+    baseline = json.loads(contract.get_applicable_baseline(case_id))
+    assert baseline["authority_documents"][0]["document_number"] == "2025-16493"
+    assert baseline["authority_documents"][0]["document_number"] != "FAA-2025-1763"

@@ -294,7 +294,7 @@ class RegulatoryEditionApplicabilityLock(gl.Contract):
         def evaluate() -> dict:
             source_statuses = {}
             versions_url = f"https://www.ecfr.gov/api/versioner/v1/versions/title-14.json?issue_date[on]={activity_date}"
-            ecfr_url = f"https://www.ecfr.gov/api/versioner/v1/full/{activity_date}/title-14.xml?part={part}"
+            ecfr_url = f"https://www.ecfr.gov/api/versioner/v1/full/{activity_date}/title-14.xml?part={part}&section={section}"
 
             def _handle_source_err(url: str, err_msg: str) -> dict:
                 is_429 = "429" in err_msg
@@ -351,13 +351,20 @@ class RegulatoryEditionApplicabilityLock(gl.Contract):
             except Exception:
                 return _handle_source_err(versions_url, "MALFORMED_VERSION_METADATA")
 
-            document_numbers = sorted(set(re.findall(r"\b20\d{2}-\d{4,6}\b", ecfr_text)))
-            if DESIGNATION_FAMILY in ecfr_text and (not document_numbers or len(document_numbers) > MAX_AUTHORITY_DOCS):
+            source_blocks = re.findall(r"<(?:SOURCE|CITA|EFFDNOT)\b[^>]*>(.*?)</(?:SOURCE|CITA|EFFDNOT)>", ecfr_text, flags=re.IGNORECASE | re.DOTALL)
+            source_evidence = " ".join(source_blocks) or ecfr_text
+            fr_citations = sorted(set(re.findall(r"\b\d{2,3}\s+FR\s+\d{3,6}\b", source_evidence)))
+            edition_match = re.search(r"FAA Order JO\s+(7400\.11[A-Z])\b", ecfr_text)
+            docket_matches = sorted(set(re.findall(r"\bFAA-\d{4}-\d{4}\b", ecfr_text)))
+            source_date_match = re.search(r"\b([A-Z][a-z]{2}\.\s+\d{1,2},\s+\d{4})\b", source_evidence)
+            if DESIGNATION_FAMILY in ecfr_text and (not fr_citations or len(docket_matches) != 1 or edition_match is None or source_date_match is None):
                 return _handle_source_err(ecfr_url, "UNBOUNDED_AUTHORITY_LINEAGE")
 
-            exact_documents = []
-            for document_number in document_numbers:
-                fr_query_url = f"https://www.federalregister.gov/api/v1/documents.json?conditions[cfr][title]=14&conditions[cfr][part]={part}&conditions[term]={document_number}&conditions[type][]=RULE&per_page=4&order=newest"
+            document_numbers = []
+            if edition_match is not None and source_date_match is not None:
+                source_publication_date = datetime.strptime(source_date_match.group(1), "%b. %d, %Y").strftime("%Y-%m-%d")
+                docket_token = docket_matches[0]
+                fr_query_url = f"https://www.federalregister.gov/api/v1/documents.json?conditions[cfr][title]=14&conditions[cfr][part]={part}&conditions[term]={docket_token}&conditions[type][]=RULE&conditions[publication_date][gte]={source_publication_date}&conditions[publication_date][lte]={source_publication_date}&per_page=4&order=newest"
                 fr_search_text, source_error = _fetch(fr_query_url, 12000)
                 if source_error is not None:
                     return source_error
@@ -365,10 +372,16 @@ class RegulatoryEditionApplicabilityLock(gl.Contract):
                     search_payload = json.loads(fr_search_text)
                     results = search_payload["results"]
                     count = int(search_payload["count"])
-                    if count > len(results) or len(results) > 4 or not any(str(item.get("document_number", "")) == document_number for item in results):
+                    matches = [str(item.get("document_number", "")) for item in results if str(item.get("publication_date", "")) == source_publication_date]
+                    if count != 1 or len(results) != 1 or len(matches) != 1:
                         return _handle_source_err(fr_query_url, "INCOMPLETE_EXACT_CITATION_QUERY")
+                    document_numbers.append(matches[0])
                 except Exception:
                     return _handle_source_err(fr_query_url, "MALFORMED_AUTHORITY_INDEX")
+
+            document_numbers = sorted(set(document_numbers))
+            exact_documents = []
+            for document_number in document_numbers:
                 exact_url = f"https://www.federalregister.gov/api/v1/documents/{document_number}.json"
                 exact_text, source_error = _fetch(exact_url, 12000)
                 if source_error is not None:
@@ -379,6 +392,9 @@ class RegulatoryEditionApplicabilityLock(gl.Contract):
                         exact_doc = next((item for item in exact_doc["results"] if str(item.get("document_number", "")) == document_number), {})
                     if str(exact_doc.get("document_number", "")) != document_number:
                         raise gl.vm.UserError("DOCUMENT_IDENTITY_MISMATCH")
+                    docket_ids = [str(value) for value in exact_doc.get("docket_ids", [])]
+                    if not any(docket_token in value for value in docket_ids) or str(exact_doc.get("publication_date", "")) != source_publication_date:
+                        raise gl.vm.UserError("DOCUMENT_CITATION_MISMATCH")
                     exact_documents.append(exact_doc)
                 except Exception:
                     return _handle_source_err(exact_url, "MALFORMED_EXACT_DOCUMENT")
@@ -450,21 +466,15 @@ Return exactly one JSON object with:
                 "source_statuses": source_statuses,
             }
 
-            raw_docs = raw_result.get("authority_documents", [])
             docs = []
-            if isinstance(raw_docs, list):
-                for doc in raw_docs[:MAX_AUTHORITY_DOCS]:
-                    if isinstance(doc, dict):
-                        doc_num = str(doc.get("document_number", "")).strip()
-                        c_url = str(doc.get("canonical_url", "")).strip()
-                        if not c_url.startswith("https://www.federalregister.gov/"):
-                            c_url = f"https://www.federalregister.gov/documents/{doc_num}"
-                        docs.append({
-                            "canonical_url": c_url,
-                            "document_number": doc_num,
-                            "effective_on": str(doc.get("effective_on", "")).strip(),
-                            "publication_date": str(doc.get("publication_date", "")).strip(),
-                        })
+            if result["outcome"] not in ("NO_BOUND_REFERENCE", "UNRESOLVED"):
+                for doc in exact_documents:
+                    docs.append({
+                        "canonical_url": str(doc.get("html_url", "")).strip(),
+                        "document_number": str(doc.get("document_number", "")).strip(),
+                        "effective_on": str(doc.get("effective_on", "")).strip(),
+                        "publication_date": str(doc.get("publication_date", "")).strip(),
+                    })
             docs.sort(key=lambda d: (d["effective_on"], d["document_number"]))
             result["authority_documents"] = docs
             return result
