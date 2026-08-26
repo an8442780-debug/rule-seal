@@ -95,14 +95,4 @@ def configure_direct_mode(direct_vm, direct_alice):
     direct_vm.strict_mocks = True
     direct_vm.check_pickling = True
     direct_vm.warp("2026-08-25T12:00:00+00:00")
-    version_pattern = r"ecfr\.gov/api/versioner/v1/versions/title-14\.json(?:\?.*)?$"
-    version_response = {"status": 200, "body": '{"content_versions":[{"date":"2024-09-15"},{"date":"2025-09-15"}]}' }
-    original_clear_mocks = direct_vm.clear_mocks
-
-    def clear_mocks_with_version_metadata():
-        original_clear_mocks()
-        direct_vm.mock_web(version_pattern, version_response)
-
-    direct_vm.clear_mocks = clear_mocks_with_version_metadata
-    direct_vm.mock_web(version_pattern, version_response)
     yield

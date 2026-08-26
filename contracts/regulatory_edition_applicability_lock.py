@@ -294,7 +294,6 @@ class RegulatoryEditionApplicabilityLock(gl.Contract):
 
         def evaluate() -> dict:
             source_statuses = {}
-            versions_url = f"https://www.ecfr.gov/api/versioner/v1/versions/title-14.json?issue_date[on]={activity_date}"
             ecfr_url = f"https://www.ecfr.gov/api/versioner/v1/full/{activity_date}/title-14.xml?part={part}&section={section}"
 
             def _handle_source_err(url: str, err_msg: str) -> dict:
@@ -338,19 +337,9 @@ class RegulatoryEditionApplicabilityLock(gl.Contract):
                 except Exception as exc:
                     return None, _handle_source_err(url, str(exc))
 
-            versions_text, source_error = _fetch(versions_url)
-            if source_error is not None:
-                return source_error
             ecfr_text, source_error = _fetch(ecfr_url)
             if source_error is not None:
                 return source_error
-            try:
-                version_payload = json.loads(versions_text)
-                versions = version_payload.get("content_versions", version_payload.get("versions", []))
-                if not isinstance(versions, list) or not versions:
-                    raise gl.vm.UserError("MISSING_AUTHORITY_METADATA")
-            except Exception:
-                return _handle_source_err(versions_url, "MALFORMED_VERSION_METADATA")
 
             source_blocks = re.findall(r"<(?:SOURCE|CITA|EFFDNOT)\b[^>]*>(.*?)</(?:SOURCE|CITA|EFFDNOT)>", ecfr_text, flags=re.IGNORECASE | re.DOTALL)
             source_evidence = " ".join(source_blocks) or ecfr_text
@@ -400,7 +389,10 @@ class RegulatoryEditionApplicabilityLock(gl.Contract):
                 except Exception:
                     return _handle_source_err(exact_url, "MALFORMED_EXACT_DOCUMENT")
 
-            versions_evidence = json.dumps(version_payload, sort_keys=True)
+            # The dated full endpoint is itself the authoritative point-in-time
+            # version. The versions index only lists amendment issue dates and
+            # legitimately returns an empty list on unchanged calendar dates.
+            versions_evidence = json.dumps({"requested_date": activity_date, "point_in_time_full": ecfr_url}, sort_keys=True)
             fr_text = json.dumps(exact_documents, sort_keys=True)
 
             section_fingerprint = hashlib.sha256(ecfr_text.encode("utf-8")).hexdigest()

@@ -901,7 +901,7 @@ def test_authoritative_fetch_chain_uses_exact_document(direct_deploy, direct_vm,
     direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(response))
     contract.assess_case(case_id)
     assert json.loads(contract.get_case(case_id))["state"] == "LOCKED"
-    assert {0, 1, 2, 3}.issubset(direct_vm._web_mocks_hit)
+    assert {0, 1, 2}.issubset(direct_vm._web_mocks_hit)
 
 
 def test_incomplete_pagination_fails_closed(direct_deploy, direct_vm, direct_alice):
