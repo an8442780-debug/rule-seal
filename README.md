@@ -1,125 +1,120 @@
 # Regulatory Edition Applicability Lock
 
-An immutable, source-bound incorporation-by-reference (IBR) regulatory baseline lock for **Title 14 CFR § 71.1** (*FAA Order JO 7400.11* family) spanning activity dates from **2000-01-01 to 2035-12-31**. Powered by the **GenLayer Intelligent Contract SDK (`py-genlayer`)** and consensus AI validator execution.
+An evidence-bound GenLayer application that determines and immutably records which FAA Order JO 7400.11 edition official sources indicate for a Title 14 CFR § 71.1 activity date.
 
----
+## Verified links
 
-## 1. System Overview & Problem Statement
+- Studionet contract: `0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae`
+- [Studionet Explorer](https://explorer-studio.genlayer.com/address/0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae)
+- Live application: added after the exact frontend revision is deployed and verified on Vercel
 
-In aviation compliance and Federal Aviation Administration (FAA) regulatory workflows, operations conducted under **Title 14 CFR Part 71 (§ 71.1)** rely on annual standard editions of **FAA Order JO 7400.11** (e.g., *7400.11H*, *7400.11J*, *7400.11K*) incorporated by reference through final rules published in the Federal Register.
+## Trust problem
 
-Historical review workflows need a reproducible evidence-navigation signal for which referenced edition the official sources indicate for a target activity date. This prototype is not legal advice, a compliance certification, or proof of applicability to a particular regulated entity.
+A case owner, resolver, or downstream checklist integrator should not be able to choose a convenient regulatory edition by assertion. Historical eCFR text, Federal Register identity, effective dates, and successor lineage can be misread or selectively presented. The application freezes the case inputs first, then delegates the consequential evidence assessment to independent GenLayer validators.
 
-This project delivers:
-1. **Intelligent Contract (`py-genlayer`)**: Encapsulates regulatory grammar rules, freeze authorization, non-deterministic web retrieval of official eCFR and Federal Register sources, validator substantive equality consensus, and immutable baseline locking.
-2. **Deterministic Successor Lineage**: Preserves chronological audit trails as new FAA standard editions supersede previous baselines.
-3. **Downstream Integration Binding**: Enables external compliance checklist systems to bind namespaces directly to locked edition baselines.
-4. **Accessible Web Workbench**: Static React 19 + TypeScript + Vite frontend featuring EIP-6963 multi-injected wallet discovery and restart-safe write journals.
+This prototype is an evidence-navigation and audit tool. It is not legal advice, a compliance certification, or proof that a rule applies to a particular regulated entity.
 
----
+## Why GenLayer is essential
 
-## 2. Intelligent Contract Architecture
+The decisive operation runs inside the Intelligent Contract. Validators independently retrieve the dated official eCFR section and bounded Federal Register evidence, derive the edition and effective interval, and compare every consequential field before consensus can change on-chain state. A successful assessment moves a frozen case to `LOCKED` or another terminal outcome, stores source-bound authority records, and enables downstream integration binding. Removing GenLayer web access, validator execution, or consensus removes the trusted decision mechanism rather than merely removing a UI feature.
 
-### Lifecycle State Machine
+## How it works
 
-```
-               +---------------------------------------+
-               |                 DRAFT                 |
-               +---------------------------------------+
-                                   |
-                             freeze_case()
-                                   |
-                                   v
-               +---------------------------------------+
-               |                FROZEN                 |
-               +---------------------------------------+
-                                   |
-                             assess_case()
-                                   |
-        +--------------------------+--------------------------+
-        |                          |                          |
-        v                          v                          v
-+---------------+          +----------------+         +----------------+
-|    LOCKED     |          | NOT_APPLICABLE |         |   UNRESOLVED   |
-+---------------+          +----------------+         +----------------+
-        |                          |                          |
-create_successor()         create_successor()         retry_unresolved()
-        |                          |                  (1h cooldown, max 3)
-        v                          v                          |
-+-------------------------------------------+                 v
-|          SUPERSEDED_BY_SUCCESSOR          |              (FROZEN)
-+-------------------------------------------+
+1. **Case owner:** creates a case for the allowlisted Title 14, Part 71, § 71.1 designation family and freezes its immutable inputs.
+2. **Resolver:** requests assessment. GenLayer validators independently fetch official sources and reach substantive consensus on the applicable edition and evidence record.
+3. **Integrator:** binds a checklist namespace to a terminal case and can later advance it to a locked successor while preserving the previous case ID.
+4. **Auditor/public user:** looks up cases, assessments, authority documents, source statuses, events, lineage, and integration state directly from Studionet.
+
+## Architecture
+
+- `contracts/regulatory_edition_applicability_lock.py` is the source of truth for case state, assessment consensus, authority evidence, lineage, integration bindings, authorization, replay protection, and upgrade authority.
+- `frontend/` is a static React 19, TypeScript, and Vite client. It discovers only supported injected wallets, submits writes through the selected provider, and reads authoritative state through one shared Studionet RPC client.
+- `tests/contract/` and `tests/fixtures/` exercise deterministic guards, official-source parsing, fail-closed evidence handling, consensus equality, retries, lineage, integrations, and upgrade behavior.
+- No backend decides outcomes or stores canonical case state. Browser storage contains only restart-safe pending-operation metadata.
+
+## Intelligent Contract
+
+The lifecycle is:
+
+```text
+DRAFT --freeze_case--> FROZEN --assess_case--> LOCKED | NOT_APPLICABLE | UNRESOLVED
+                                      UNRESOLVED --retry_unresolved--> FROZEN
+LOCKED | NOT_APPLICABLE --create_successor--> SUPERSEDED_BY_SUCCESSOR + successor DRAFT
 ```
 
-### Consensus & Non-Deterministic Execution
+Key methods include `create_case`, `freeze_case`, `assess_case`, `retry_unresolved`, `create_successor`, and `activate_integration`. Storage values are extracted to deterministic primitives before nondeterministic execution. Each validator refetches official evidence and requires substantive equality across the outcome, designation, edition, effective interval, eCFR date/fingerprint, reason code, exact authority documents, and source statuses. The contract is Root Slot upgradable by the locked Studio account recorded in [the deployment manifest](docs/DEPLOYMENT.md).
 
-- **Deterministic Primitive Extraction**: Storage keys, target dates, and allowlisted strings are extracted into local primitive variables prior to calling `gl.vm.run_nondet_unsafe(evaluate, validate)`.
-- **Substantive Equality Consensus**: Each validator independently fetches official regulatory sources, evaluates standard applicability, and validates exact equality across all consequential fields:
-  - `schema_version`
-  - `outcome` (`EDITION_APPLIES`, `NOT_YET_EFFECTIVE`, `SUPERSEDED_FOR_DATE`, `NO_BOUND_REFERENCE`, `UNRESOLVED`)
-  - `standard_body`
-  - `designation_family`
-  - `edition`
-  - `effective_from` & `effective_to`
-  - `ecfr_date`
-  - `reason_code`
-  - `authority_documents` (sorted by document number)
-- The full accepted record still validates and stores the bounded eCFR fingerprint and source-status map. Those transient evidence representations are not used as outcome-authorizing equality fields when the independently derived consequential facts agree.
-- **Root Slot Upgradability**: Adheres to the official GenLayer SDK pattern (`root = gl.storage.Root.get(); root.upgraders.get().append(...)`) enabling governed contract upgrades.
+## Transaction lifecycle
 
----
+The frontend separates wallet signing, broadcast, consensus, finality, execution, and readback:
 
-## 3. Frontend Architecture
+1. It probes durable browser storage and creates a restart-safe pre-sign intent.
+2. It writes through the exact EIP-1193 provider selected by the user.
+3. `ACCEPTED` remains pending; polling continues with bounded backoff and pauses while the tab is hidden.
+4. Success requires `FINALIZED` plus `FINISHED_WITH_RETURN`.
+5. The relevant authoritative contract readback must succeed before the journal entry is removed.
+6. Finalized execution errors fail closed. Ambiguous or interrupted writes remain available for bounded reload reconciliation and cannot be manually discarded as if they never existed.
 
-- **Zero Heavy Frameworks**: Pure React 19.2.8, TypeScript 7.0.2, Vite 8.2.2, Vitest 4.1.11, `genlayer-js 1.1.8`.
-- **EIP-6963 Multi-Injected Discovery**: Passive discovery via `eip6963:announceProvider` filtering exclusively for MetaMask, OKX Wallet, and Rabby without calling `eth_requestAccounts` upon dialog opening.
-- **Shared Singleton RPC Client**:
-  - 10-second TTL cache for contract reads
-  - In-flight request deduplication
-  - Exponential backoff with jitter on 429/5xx status codes
-  - Transaction finality polling with backoff (2.5s to 10s) and tab-hidden pauses
-  - Operational journey instrumentation
-- **Restart-Safe Pending Journal**: Persists pre-signing intent and broadcast transaction hashes to `localStorage`/`sessionStorage` to guard against reload interruptions.
+## Run locally
 
----
+Prerequisites: Python 3.13 with the recorded GenLayer Direct Mode test environment, Node.js 20+, and npm.
 
-## 4. Quickstart & Verification
-
-### Prerequisites
-- Python 3.13 with the recorded `py-genlayer`/`gltest` runner and `pytest`
-- Node.js 20+ and `npm`
-
-### Contract Test Suite
-```bash
-# Run intelligent contract unit tests
+```powershell
 py -3.13 -m pytest -q -p no:cacheprovider
-```
 
-### Frontend Test Suite & Build
-```bash
-cd frontend
-
-# Run frontend unit tests (Vitest)
-npm test
-
-# Typecheck and production bundle build
-npm run build
-
-# Launch development server
+Set-Location frontend
+npm ci
+$env:VITE_CONTRACT_ADDRESS='0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae'
 npm run dev
 ```
 
----
+The frontend uses Studionet chain ID `61999` and RPC `https://studio.genlayer.com/api`. No private key or Studio wallet is required by the web application.
 
-## 5. Official Regulatory Data Sources
+## Tests and verification
 
-- **eCFR Versioner v1 API**: `https://www.ecfr.gov/api/versioner/v1/full/{date}/title-14.xml?part=71`
-- **Federal Register v1 API**: bounded Title 14/Part 71 rule query with the exact `7400.11` term, derived by the contract.
+Current verified results:
 
----
+- Contract Direct Mode: 24 passed; six documented fail-fast unused-mock warnings.
+- GenVM lint: three checks passed; semantic validation passed for 23 public methods.
+- Frontend Vitest: five files, 36 tests passed.
+- TypeScript and Vite production build: passed; the documented approximately 772 KB bundle warning remains non-blocking.
+- Studionet: exact-source deployment and 18-transaction live evidence ledger independently approved at `POST_DEPLOY_TEST`.
 
-## 6. Security & Governance Invariants
+```powershell
+py -3.13 -m pytest -q -p no:cacheprovider
+genvm-lint check contracts\regulatory_edition_applicability_lock.py
 
-1. **No Mock Deployments**: No fake contract addresses or `.env` files are checked into repository.
-2. **Immutable Fingerprinting**: Deterministic fingerprinting prevents colliding baselines for identical section, activity date, and designation family combinations.
-3. **Idempotency Guarantees**: Client nonces enforce single-execution guarantees across write transactions.
+Set-Location frontend
+npm test
+npm run build
+```
+
+See [Verification](docs/VERIFICATION.md) and [Studionet Evidence](docs/STUDIONET-EVIDENCE.md) for the matrices and transaction hashes.
+
+## Deployment
+
+- Network: GenLayer Studionet, chain ID `61999`
+- Primary contract: `0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae`
+- Deployment transaction: `0xd0589df3c0ccfacd875895362d61028b6a678381b6a94caac40dd8861464d695`
+- Deployed source commit: `b4aff7156b03dc040eb298290f276057cce47359`
+- Source SHA-256: `E6466FDED2D1FF2195E4710AB78FD35DEFFF1F51EF97953B791853BE7E284B23`
+- Deployed-code parity: `gen_getContractCode` returned 33,345 bytes hashing to the exact source SHA-256.
+
+The isolated same-code upgrade rehearsal preserved source parity, upgrader authority, and zero-case state. A distinct unauthorized actor's upgrade finalized with `UPGRADE_NOT_AUTHORIZED` and no mutation. Recovery and account-loss limits are documented in [Deployment](docs/DEPLOYMENT.md) and [Recovery](docs/RECOVERY.md).
+
+## Security and trust boundaries
+
+- Only MetaMask, OKX Wallet, and Rabby EIP-6963 announcements with allowlisted RDNS identities appear in the chooser; opening it never requests accounts.
+- Deterministic grammar, date bounds, fingerprints, authorization, nonces, cooldowns, and retry caps run before nondeterministic evaluation.
+- Validators fetch official eCFR and Federal Register endpoints independently. Missing, malformed, ambiguous, mismatched, rate-limited, or unavailable evidence cannot authorize a conclusive lock.
+- Federal Register identifiers, docket membership, publication dates, and authority URLs are derived from exact official payloads rather than model-proposed metadata.
+- Shared RPC caching, in-flight deduplication, bounded retry, hidden-tab polling pauses, volatile write locks, and persistent journals limit call storms and duplicate writes without weakening finality checks.
+- Root Slot upgrades remain recoverable only while the recorded Studio upgrader account and Studionet state remain available.
+
+## Known limitations
+
+- Scope is deliberately limited to Title 14 CFR Part 71, § 71.1 and the FAA Order JO 7400.11 designation family for dates from `2000-01-01` through `2035-12-31`.
+- Official upstream availability and validator consensus can produce `UNRESOLVED`; retries are limited to three with a one-hour cooldown.
+- Browser journals are local to the origin and browser profile; authoritative recovery always depends on the transaction hash and Studionet readback.
+- Studionet is a test network. Its state, addresses, and upgrade authority can be lost if the network or Studio account is reset.
+- The production web release and independent-wallet user E2E are required later-stage evidence and are not claimed until completed.
