@@ -16,6 +16,36 @@ This document defines the formal verification procedures, automated test matrice
 
 Production E2E used OKX account `0x5be59b33326772376a01e96e525d6d18fc821113`. It created `REAL-000005`, recovered the submitted write after reload, froze and assessed the case to `LOCKED`, bound integration namespace `vercel-e2e-5be51113`, and verified auditor events `EVT-000015` through `EVT-000018`. Finalized transactions were `0x7b11d3e008f528d9c8718943c415ba8c0434292a02b94b85e1480d387a5e9a9f`, `0xd7b44e450f0961fff4c2d6bf07c9a6d0a06f4ccbe251947e3f1493e59b2d9a72`, `0x3ed6ba14d5996de5a5bb874a9bf57742f1dfba21a520ea0a8a70d25a75c7a7bf`, and `0xd65edd099100511f395c76493dfac16db9a256c8f7d2a5bcbd02408b11538796`.
 
+## Final release gates and scorecard
+
+- GitHub Presentation Gate: **PASS**. The public repository owner, default branch, exact commit, rendered README order, verified links, clean root, forbidden-file scan, secret scan, commit history, and source/deployment continuity were checked after push.
+- Primary-AI final technical verdict: **APPROVED** for the exact revision and evidence listed here.
+
+```text
+GENLAYER SUBMISSION CATEGORY AND SCORECARD
+Category: PROJECT
+Validity gate: PASS
+
+GenLayer fit: 5
+Evidence: Official eCFR and Federal Register evidence requires validator consensus before an edition-applicability decision changes immutable case and integration state; verified in the deployed contract, Studio matrix, and REAL-000005 production E2E.
+Weakness/blocker: Deliberately limited to one high-value CFR section and FAA designation family.
+
+Contract quality: 5
+Evidence: Exact schemas, independent source refetch, substantive equality, fail-closed source handling, retry controls, successor lineage, integration advancement, upgrade recovery, 24 Direct Mode tests, and the approved Studionet matrix.
+Weakness/blocker: Official upstream outages may produce UNRESOLVED by design.
+
+Engineering: 4
+Evidence: Reproducible Python/TypeScript builds, 24 contract tests, 37 frontend tests, GenVM lint/semantic validation, restart-safe journal, centralized bounded RPC behavior, deployment/source evidence, and recovery documentation.
+Weakness/blocker: The production JavaScript bundle retains the documented approximately 772 KB warning.
+
+Frontend / UX: 4
+Evidence: Six real contract-backed workbenches, explicit supported-wallet chooser, finality/execution/readback UI, reload reconciliation, and completed independent OKX production writes through auditor evidence.
+Weakness/blocker: The UI covers the allowlisted regulatory workflow rather than a broader multi-regulation navigator.
+
+Overall evidence-based assessment: Strong complete Project with exceptional GenLayer necessity and contract rigor, plus a verified live independent-wallet journey.
+Submission recommendation: READY
+```
+
 ---
 
 ## 1. Automated Intelligent Contract Verification
