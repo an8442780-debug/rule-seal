@@ -31,5 +31,31 @@ Explorer: `https://explorer-studio.genlayer.com/address/0xe748F61a8F8C6c140E7511
 - Deploy: `0x1e287251aa10a554b398e1d5cc48b60717c3b96095d795a79042f84891f9d9a8`, `FINALIZED`, `SUCCESS`.
 - Same-code upgrade: `0x96edfcc98cb85de9ea05e6ae5eeb54978208c3ba8898e71dcb957251a44839b8`, `FINALIZED`.
 - Finalized post-upgrade `get_upgrader()` remained `0x34b92E6553eaCA11A00A9d86d75d8a7881779D78`.
+- Explorer post-upgrade code SHA-256 remained `F46CC3F52867E1B78517789074B46FBA34B23171F00EDAFCE40AC80CEC433814`.
+- Finalized post-upgrade `get_case_count()` returned `0`, proving preserved empty pre-upgrade state.
 
 The rehearsal did not alter the primary release instance.
+
+## Rehearsal live matrix
+
+The rehearsal instance uses the exact approved source, locked account, and validator set. It is isolated from the primary release state so boundary and rejection cases cannot contaminate the canonical lifecycle.
+
+| Criterion / risk | Transaction | Final result | Authoritative result |
+|---|---|---|---|
+| Boundary create: before effective date (`2025-09-14`) | `0x8782c914d26e221dcb75c2a8f43b4739b0b7605d4174afa781afc51518cc80e0` | `FINALIZED`, `SUCCESS` | `REAL-000001`, exact date/fingerprint stored |
+| Boundary create: at effective date (`2025-09-15`) | `0x123ace74a327b9cc9d8c2a49b13e2669641530a6e6c13b2b9a17778844a015c0` | `FINALIZED`, `SUCCESS` | `REAL-000002`, exact date/fingerprint stored |
+| Boundary create: after effective date (`2025-09-16`) | `0x4782b54906f31ffef8ac3ce59bc9003cfdd27951fcc51618d0527b3a5d2cbd74` | `FINALIZED`, `SUCCESS` | `REAL-000003`, exact date/fingerprint stored |
+| Freeze at boundary | `0x302a5242e2d7d340e3544d640783f4077b57b39cce29a109f280ccccdcc98784` | `FINALIZED`, `SUCCESS` | `REAL-000002` became `FROZEN` |
+| Freeze after boundary | `0xbffa848e86282229a04dc9b00760ec569bc8289acb6e61aee7e53a92676bae5f` | `FINALIZED`, `SUCCESS` | `REAL-000003` became `FROZEN` |
+| Assess at boundary | `0x89f141b37f832bf29eae80fcb28f6e16f53147941b5b7dc68f0d048da5f93f4f` | `FINALIZED`, `SUCCESS` | `REAL-000002` became `LOCKED`; assessment `REAL-000002-A01` |
+| Upstream unavailable after boundary | `0xcbd6b220d5caf346c071cc08dde6a469871781244f707e903422e901a4b20c93` | `FINALIZED`, `SUCCESS` | `REAL-000003` became `UNRESOLVED`; `UPSTREAM_SOURCE_UNAVAILABLE`; eCFR full text `HTTP_200`, version index `UNAVAILABLE` |
+| Immediate retry cooldown | `0x89f3d592fe4652d0bee0bcfb8587d28534d7695df1acebe96aab5ce1bd4aadba` | `FINALIZED`, `ERROR`, rollback | exact error `RETRY_COOLDOWN_ACTIVE`; case remains `UNRESOLVED`, attempt count `1` |
+| Create successor lineage | `0x1828a30c20dc363a647a5fc98908b23e3c98644c5d422b5ffe4fd8711dc59760` | `FINALIZED`, `SUCCESS` | `REAL-000004.predecessor_case_id = REAL-000002`; predecessor points to successor |
+| Freeze successor | `0x560c842e03f00dca36df7ff90b7564370151695ed38866178fce8f115078b82a` | `FINALIZED`, `SUCCESS` | successor became `FROZEN` |
+| Successor evidence unavailable | `0x5e79938301f35bac15e18e14657c6eead54d278bd0cf6387b65c16f95de74088` | `FINALIZED`, `SUCCESS` | successor became `UNRESOLVED`, preserving predecessor lineage |
+| Reject successor from non-terminal case | `0xa40346c598a1b5ea837c5dff2402cd781cd6aea3212afb182c465c1be01c14d8` | `FINALIZED`, `ERROR`, rollback | exact error `OLD_CASE_NOT_TERMINAL`; no new case |
+| Freeze before-boundary case | `0x270f530d8f5d412bafb902e975b76d344e10d9e963f3b453098a75a73a06385d` | `FINALIZED`, `SUCCESS` | `REAL-000001` became `FROZEN` |
+| Before-boundary evidence unavailable | `0x5618e6fed12d09fae488fd77f94987e30a46f42ca01f57aab03079fc56cb1497` | `FINALIZED`, `SUCCESS` | `REAL-000001` became `UNRESOLVED`; no unsafe applicability lock |
+| Duplicate nonce replay | `0x6ffae68b4207c8345c9a2ff38116537bda11d379d3f3be8749fc1b6705994a67` | `FINALIZED`, `ERROR`, rollback | exact error `DUPLICATE_NONCE`; finalized `get_case_count()` remains `4` |
+
+The official eCFR version-index endpoint was intermittently unavailable during this matrix. The contract therefore correctly refused to fabricate boundary or successor outcomes and stored auditable `UNRESOLVED` assessments. A terminal successor assessment and integration advancement cannot be forced without either waiting for the official endpoint plus the one-hour retry window or changing the reviewed source/evidence boundary. Their deterministic state transitions, authorization, namespace advancement, `NO_BOUND_REFERENCE`, retry cap, case/integration caps, fingerprint replay, and unavailable-source distinctions remain covered by the 24 Direct Mode tests. Creating 128 cases or 256 integrations solely to hit storage caps would violate the smallest-sufficient Studio rule and add unrelated persistent state; the exact guard constants and rollback behavior are verified locally instead.

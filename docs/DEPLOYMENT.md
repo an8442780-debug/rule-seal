@@ -33,4 +33,5 @@ Upgrade authority depends on continued access to the locked Studio account and p
 - Separate rehearsal instance: `0xB4A43d6CE9B50976Ec412F5ab80ec6dcC590bA61`.
 - Rehearsal deploy transaction: `0x1e287251aa10a554b398e1d5cc48b60717c3b96095d795a79042f84891f9d9a8` (`FINALIZED`, `SUCCESS`).
 - Same-code safe upgrade transaction: `0x96edfcc98cb85de9ea05e6ae5eeb54978208c3ba8898e71dcb957251a44839b8` (`FINALIZED`); finalized upgrader readback remained the locked account.
+- Rehearsal Explorer code after upgrade hashes to the approved source SHA-256 above; finalized `get_case_count()` remained `0`, proving state preservation.
 - Complete smallest-sufficient ledger: `docs/STUDIONET-EVIDENCE.md`.
