@@ -1,5 +1,7 @@
 # Studionet Evidence Ledger
 
+> Historical ledger: every transaction below belongs to the superseded source hash `F46CC3F52867E1B78517789074B46FBA34B23171F00EDAFCE40AC80CEC433814`. It is retained to preserve failed attempts and diagnosis, but it is not claimed as live proof for source commit `b4aff7156b03dc040eb298290f276057cce47359` / hash `E6466FDED2D1FF2195E4710AB78FD35DEFFF1F51EF97953B791853BE7E284B23`.
+
 ## Exact revision binding
 
 - PRE_DEPLOY approval: commit `7682446af00278c281646c7dbc6526eb05151c27`.
@@ -60,4 +62,4 @@ The rehearsal instance uses the exact approved source, locked account, and valid
 | Non-owner freeze | `0xf6455fbd0f3ed7ef60389d514f44a8bf1e11c7bf9dfded9d817b0d561622be77` | distinct actor `0x22A2906BB59A1DFaEEAD6148eba7dB24d6F22FB1`; `FINALIZED`, `ERROR`, rollback | exact error `NOT_CASE_OWNER`; finalized `REAL-000004` owner/state/attempt remain unchanged |
 | Unauthorized upgrade | `0xbf79c0e28ee720692c70c30d5a1a6d12f9420ce7a13a2f181baecccf564d3051` | distinct actor above; `FINALIZED`, `ERROR`, rollback | exact error `UPGRADE_NOT_AUTHORIZED`; finalized upgrader remains locked account and Explorer code hash remains approved hash |
 
-The official eCFR version-index endpoint was intermittently unavailable during this matrix. The contract therefore correctly refused to fabricate boundary or successor outcomes and stored auditable `UNRESOLVED` assessments. A terminal successor assessment and integration advancement cannot be forced without either waiting for the official endpoint plus the one-hour retry window or changing the reviewed source/evidence boundary. Their deterministic state transitions, authorization, namespace advancement, `NO_BOUND_REFERENCE`, retry cap, case/integration caps, fingerprint replay, and unavailable-source distinctions remain covered by the 24 Direct Mode tests. Creating 128 cases or 256 integrations solely to hit storage caps would violate the smallest-sufficient Studio rule and add unrelated persistent state; the exact guard constants and rollback behavior are verified locally instead.
+The official exact-date versions index returned `HTTP_200` with an empty `content_versions` list on unchanged calendar dates while the authoritative dated full-section endpoint returned `HTTP_200`. Treating that empty amendment-date index as unavailable was the root cause of the unresolved boundary/successor cases. Source commit `b4aff7156b03dc040eb298290f276057cce47359` removes that unnecessary index dependency and retains the authoritative point-in-time full-section fetch plus exact Federal Register verification. Because this is a source change, all transactions above are historical and the full required matrix must be rerun after fresh `PRE_DEPLOY` approval.

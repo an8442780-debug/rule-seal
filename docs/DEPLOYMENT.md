@@ -10,22 +10,25 @@
 - Locked Studio deployer/upgrader: `0x34b92E6553eaCA11A00A9d86d75d8a7881779D78`
 - Intended role: deployer and Root Slot upgrader
 - Contract source: `contracts/regulatory_edition_applicability_lock.py`
-- Source SHA-256: `F46CC3F52867E1B78517789074B46FBA34B23171F00EDAFCE40AC80CEC433814`
+- Source commit: `b4aff7156b03dc040eb298290f276057cce47359`
+- Source SHA-256: `E6466FDED2D1FF2195E4710AB78FD35DEFFF1F51EF97953B791853BE7E284B23`
 - GenVM text-runner version header: `# v0.1.0`
 - Linked contracts: none
-- Contract address: `0xe748F61a8F8C6c140E7511F717e5Eec255f9401e`
-- Deployment transaction: `0xcbb42ed3750cd5142f54c6f9f2dab53df7028bb62d3f1a59d9de9b8f25785d64`
-- Explorer: `https://explorer-studio.genlayer.com/address/0xe748F61a8F8C6c140E7511F717e5Eec255f9401e`
+- Contract address: pending fresh `PRE_DEPLOY` approval
+- Deployment transaction: pending fresh `PRE_DEPLOY` approval
+- Explorer: pending fresh `PRE_DEPLOY` approval
 
 Changing the source, constructor, dependency header, classification, or locked account invalidates the `PRE_DEPLOY` package and requires a new review.
 
-The prior reviewed source (`02058B6B...C609`) was rejected by Studionet schema extraction before signing with `invalid_contract absent_runner_comment`. No deployment transaction was created. The only source correction is the required GenVM text-runner version line above; the pinned `py-genlayer` dependency and all contract behavior remain unchanged.
+The prior deployment remains historical evidence only. Its exact-date versions-index dependency returned an empty `content_versions` list on unchanged dates, even though the authoritative dated full-section endpoint returned `HTTP_200`. The corrected source uses that point-in-time full endpoint directly; it does not weaken the exact Federal Register discovery, identity checks, validator refetch, or consequential equality rules. A fresh approval and deployment are required before this revision can become the release instance.
 
 ## Recovery limits
 
 Upgrade authority depends on continued access to the locked Studio account and persistence of Studionet state. If the account becomes unavailable, the existing instance may remain readable but its upgrade authority cannot be recovered; a reviewed replacement deployment is required. If Studionet resets, the old address and state cannot be recovered. In both cases, restore from the exact recorded source/manifest, rerun the complete live matrix, and update every frontend and evidence reference.
 
-## POST_DEPLOY_TEST evidence
+## Superseded POST_DEPLOY_TEST evidence
+
+The following evidence belongs to source hash `F46CC3F52867E1B78517789074B46FBA34B23171F00EDAFCE40AC80CEC433814` and is not release evidence for the current source:
 
 - Deployment: `FINALIZED`, GenVM `SUCCESS`, consensus `Accepted`.
 - Explorer code SHA-256: `F46CC3F52867E1B78517789074B46FBA34B23171F00EDAFCE40AC80CEC433814` (exact source parity).
