@@ -138,6 +138,27 @@ export class RpcClient {
   public getRawClient(): any {
     return this.client;
   }
+
+  public async getTransactionOutcome(hash: string): Promise<{ transaction: any; status: string; execution: string }> {
+    const transaction = await this.client.getTransaction({ hash });
+    const status = (transaction?.statusName || transaction?.status_name || transaction?.status || '').toString().toUpperCase();
+    let execution = (
+      transaction?.txExecutionResultName ||
+      transaction?.tx_execution_result_name ||
+      transaction?.execution_result ||
+      ''
+    ).toString().toUpperCase();
+
+    if (!execution && status === 'FINALIZED') {
+      const leader = transaction?.consensus_data?.leader_receipt?.find?.((receipt: any) => receipt?.mode === 'leader');
+      const leaderExecution = (leader?.execution_result || '').toString().toUpperCase();
+      const resultStatus = (leader?.result?.status || '').toString().toUpperCase();
+      if (leaderExecution === 'SUCCESS' && resultStatus === 'RETURN') execution = 'FINISHED_WITH_RETURN';
+      if (leaderExecution === 'ERROR' || resultStatus === 'ERROR') execution = 'FINISHED_WITH_ERROR';
+    }
+
+    return { transaction, status, execution };
+  }
 }
 
 export const sharedRpc = RpcClient.getInstance();

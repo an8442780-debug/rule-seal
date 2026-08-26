@@ -152,24 +152,24 @@ describe('JournalService (Restart-Safe Write Pipeline & Reconciliation)', () => 
     journalService.releaseWriteLock('op-pending');
 
     const rawClient = sharedRpc.getRawClient();
-    vi.spyOn(rawClient, 'getTransactionReceipt').mockImplementation(async ({ hash }: any) => {
+    vi.spyOn(rawClient, 'getTransaction').mockImplementation(async ({ hash }: any) => {
       if (hash === '0xfin123') {
         return {
-          status: 'FINALIZED',
-          execution_result: 'FINISHED_WITH_RETURN',
+          statusName: 'FINALIZED',
+          txExecutionResultName: 'FINISHED_WITH_RETURN',
           result: 1,
         };
       }
       if (hash === '0xfail123') {
         return {
-          status: 'FINALIZED',
-          execution_result: 'FINISHED_WITH_ERROR',
+          statusName: 'FINALIZED',
+          txExecutionResultName: 'FINISHED_WITH_ERROR',
           error: 'CASE_NOT_FROZEN',
         };
       }
       if (hash === '0xpending123') {
         return {
-          status: 'ACCEPTED',
+          statusName: 'ACCEPTED',
         };
       }
       return null;

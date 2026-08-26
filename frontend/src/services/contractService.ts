@@ -398,8 +398,6 @@ export class ContractService {
   public async waitForFinalizedTransaction(txHash: string, deadlineMs = 600_000): Promise<any> {
     const startTime = Date.now();
     let pollInterval = 2500;
-    const client = sharedRpc.getRawClient();
-
     while (Date.now() - startTime < deadlineMs) {
       // Pause if tab is hidden
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
@@ -416,10 +414,8 @@ export class ContractService {
 
       try {
         sharedRpc.trackJourneyCall('tx_poll');
-        const receipt = await client.getTransactionReceipt({ hash: txHash });
+        const { transaction: receipt, status, execution: execRes } = await sharedRpc.getTransactionOutcome(txHash);
         if (receipt) {
-          const status = (receipt.statusName || receipt.transactionStatusName || receipt.status || '').toString().toUpperCase();
-          const execRes = (receipt.txExecutionResultName || receipt.execution_result || receipt.executionResult || '').toString().toUpperCase();
 
           // Blocker 2: ACCEPTED must NOT be treated as finalized. Finality requires status === FINALIZED
           if (status === 'FINALIZED') {

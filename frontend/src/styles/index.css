@@ -429,6 +429,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .step-completed { background-color: #10b981; color: #ffffff; }
 .step-error { background-color: #ef4444; color: #ffffff; }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;

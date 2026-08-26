@@ -113,8 +113,6 @@ export class JournalService {
     const finalized: string[] = [];
     const failed: string[] = [];
     const stillPending: string[] = [];
-    const client = sharedRpc.getRawClient();
-
     let count = 0;
     for (const op of pending) {
       count++;
@@ -128,11 +126,8 @@ export class JournalService {
       }
 
       try {
-        const receipt = await client.getTransactionReceipt({ hash: op.txHash });
+        const { transaction: receipt, status, execution: execRes } = await sharedRpc.getTransactionOutcome(op.txHash);
         if (receipt) {
-          const status = (receipt.statusName || receipt.transactionStatusName || receipt.status || '').toString().toUpperCase();
-          const execRes = (receipt.txExecutionResultName || receipt.execution_result || receipt.executionResult || '').toString().toUpperCase();
-
           if (status === 'FINALIZED') {
             if (execRes === 'FINISHED_WITH_RETURN') {
               if (verifyEffect && await verifyEffect(op)) {

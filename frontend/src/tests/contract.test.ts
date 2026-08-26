@@ -125,9 +125,9 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
 
     // Mock receipt polling
     const rawClient = sharedRpc.getRawClient();
-    vi.spyOn(rawClient, 'getTransactionReceipt').mockResolvedValue({
-      status: 'FINALIZED',
-      execution_result: 'FINISHED_WITH_RETURN',
+    vi.spyOn(rawClient, 'getTransaction').mockResolvedValue({
+      statusName: 'FINALIZED',
+      txExecutionResultName: 'FINISHED_WITH_RETURN',
       result: 1,
     });
 
@@ -153,28 +153,28 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
     const rawClient = sharedRpc.getRawClient();
     let pollCount = 0;
 
-    vi.spyOn(rawClient, 'getTransactionReceipt').mockImplementation(async () => {
+    vi.spyOn(rawClient, 'getTransaction').mockImplementation(async () => {
       pollCount++;
       if (pollCount === 1) {
-        return { status: 'ACCEPTED' }; // not finalized yet!
+        return { statusName: 'ACCEPTED' }; // not finalized yet!
       }
       return {
-        status: 'FINALIZED',
-        execution_result: 'FINISHED_WITH_RETURN',
+        statusName: 'FINALIZED',
+        txExecutionResultName: 'FINISHED_WITH_RETURN',
       };
     });
 
     const receipt = await contractService.waitForFinalizedTransaction('0xaccepted-then-finalized');
-    expect(receipt.status).toBe('FINALIZED');
+    expect(receipt.statusName).toBe('FINALIZED');
     expect(pollCount).toBe(2);
   });
 
   it('throws TRANSACTION_EXECUTION_FAILED on FINISHED_WITH_ERROR with BigInt safe error handling', async () => {
     const rawClient = sharedRpc.getRawClient();
 
-    vi.spyOn(rawClient, 'getTransactionReceipt').mockResolvedValue({
-      status: 'FINALIZED',
-      execution_result: 'FINISHED_WITH_ERROR',
+    vi.spyOn(rawClient, 'getTransaction').mockResolvedValue({
+      statusName: 'FINALIZED',
+      txExecutionResultName: 'FINISHED_WITH_ERROR',
       error: 'DUPLICATE_CLIENT_NONCE',
       data: { code: 123n }, // Contains BigInt
     });
@@ -187,13 +187,27 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
   it('throws TRANSACTION_UNKNOWN_EXECUTION_RESULT if execution_result is missing on FINALIZED receipt', async () => {
     const rawClient = sharedRpc.getRawClient();
 
-    vi.spyOn(rawClient, 'getTransactionReceipt').mockResolvedValue({
-      status: 'FINALIZED',
+    vi.spyOn(rawClient, 'getTransaction').mockResolvedValue({
+      statusName: 'FINALIZED',
       // No execution_result or result
     });
 
     await expect(
       contractService.waitForFinalizedTransaction('0xunknown-exec')
     ).rejects.toThrow('TRANSACTION_UNKNOWN_EXECUTION_RESULT');
+  });
+
+  it('accepts the current Studionet leader-receipt return shape', async () => {
+    const rawClient = sharedRpc.getRawClient();
+    vi.spyOn(rawClient, 'getTransaction').mockResolvedValue({
+      statusName: 'FINALIZED',
+      consensus_data: {
+        leader_receipt: [{ mode: 'leader', execution_result: 'SUCCESS', result: { status: 'return' } }],
+      },
+    });
+
+    await expect(contractService.waitForFinalizedTransaction('0xstudio-shape')).resolves.toMatchObject({
+      statusName: 'FINALIZED',
+    });
   });
 });
