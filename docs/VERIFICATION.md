@@ -34,6 +34,8 @@ py -3.13 -m pytest -q -p no:cacheprovider
 
 Current independently reproduced result: **24 passed**. The suite currently reports 12 expected unused-mock warnings: five tests do not assess and therefore do not consume the autouse versions mock; the remainder are deliberate fail-fast/short-circuit cases that do not consume downstream web mocks.
 
+Studionet schema extraction additionally requires the text-runner version header `# v0.1.0` before the pinned runner dependency. The corrected source reaches the no-parameter deployment screen; the previous header-only form failed before signing with `invalid_contract absent_runner_comment`.
+
 ---
 
 ## 2. Frontend Automated Verification

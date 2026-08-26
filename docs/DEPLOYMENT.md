@@ -10,11 +10,14 @@
 - Locked Studio deployer/upgrader: `0x34b92E6553eaCA11A00A9d86d75d8a7881779D78`
 - Intended role: deployer and Root Slot upgrader
 - Contract source: `contracts/regulatory_edition_applicability_lock.py`
-- Source SHA-256: `02058B6BE35EB80476483BA7B29AB96678E44E696B4CAB8B8CBF8049CD2CC609`
+- Source SHA-256: `F46CC3F52867E1B78517789074B46FBA34B23171F00EDAFCE40AC80CEC433814`
+- GenVM text-runner version header: `# v0.1.0`
 - Linked contracts: none
 - Deployment transaction/address/Explorer: pending `PRE_DEPLOY` approval; no transaction has been signed or sent
 
 Changing the source, constructor, dependency header, classification, or locked account invalidates the `PRE_DEPLOY` package and requires a new review.
+
+The prior reviewed source (`02058B6B...C609`) was rejected by Studionet schema extraction before signing with `invalid_contract absent_runner_comment`. No deployment transaction was created. The only source correction is the required GenVM text-runner version line above; the pinned `py-genlayer` dependency and all contract behavior remain unchanged.
 
 ## Recovery limits
 
