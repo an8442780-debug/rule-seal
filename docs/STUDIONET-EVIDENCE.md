@@ -1,5 +1,55 @@
 # Studionet Evidence Ledger
 
+## Current exact-revision POST_DEPLOY_TEST evidence
+
+- Source commit: `b4aff7156b03dc040eb298290f276057cce47359`
+- Evidence-base package commit before this ledger update: `16645deed80fa720b498be7f5e1481f4196d5638`
+- Source SHA-256: `E6466FDED2D1FF2195E4710AB78FD35DEFFF1F51EF97953B791853BE7E284B23`
+- PRE_DEPLOY verdict: `APPROVED`
+- Network: Studionet, chain ID `61999`
+- Locked deployer/upgrader: `0x34b92E6553eaCA11A00A9d86d75d8a7881779D78`
+- Primary address: `0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae`
+- Explorer: `https://explorer-studio.genlayer.com/address/0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae`
+
+### Deployment and parity
+
+| Step | Transaction | Final result | Authoritative evidence |
+|---|---|---|---|
+| Deploy exact source | `0xd0589df3c0ccfacd875895362d61028b6a678381b6a94caac40dd8861464d695` | `FINALIZED`, `SUCCESS`, `MAJORITY_AGREE` | deployed code SHA-256 equals exact source hash; finalized upgrader readback equals locked account |
+
+### Smallest-sufficient primary lifecycle matrix
+
+| Step | Transaction | Final result | Authoritative readback |
+|---|---|---|---|
+| Create before boundary (`2025-09-14`) | `0x19f96e6500649c1a97ef77d9bb17b973586b2f2e8f3e441df2944df7945b8538` | `FINALIZED`, `SUCCESS` | `REAL-000001`, `DRAFT` |
+| Create at boundary (`2025-09-15`) | `0x33fd0af70123a466cf2af0c34fc2599120877795681b3187677a2fa3f5f2525e` | `FINALIZED`, `SUCCESS` | `REAL-000002`, `DRAFT` |
+| Create after boundary (`2025-09-16`) | `0xfe4cbc33eae2deac6f6c16b9b09d7af4a150fa06d9e614532f05ca6ad1f0dcf2` | `FINALIZED`, `SUCCESS` | `REAL-000003`, `DRAFT` |
+| Freeze before | `0x0414778f1ab91039a44fc0530e04ca4008aae3e1dd9ef0290eb9afcc18c5c8d7` | `FINALIZED`, `SUCCESS` | `REAL-000001`, `FROZEN` |
+| Freeze at | `0xbe7dc0c69a98dec5fc10f71fc235fe140599e6b7383e7ee6a200d2d6d2c2a7c3` | `FINALIZED`, `SUCCESS` | `REAL-000002`, `FROZEN` |
+| Freeze after | `0xaeb3785d9493a4f38144eb19de4682ec8d8062ce43c7860ce9e6a0e1cc36cad7` | `FINALIZED`, `SUCCESS` | `REAL-000003`, `FROZEN` |
+| Assess before | `0x2d132edc143d38d17605275f615b452d912b4f74215aff9202657e901504ba52` | `FINALIZED`, `SUCCESS` | `LOCKED`; `REAL-000001-A01`; `FAA Order JO 7400.11J`; `EDITION_APPLIES`; effective `2024-09-15` to `2025-09-15` |
+| Assess at | `0x13dca7cedd0c94944bc6ac911bd55568be64a7b414c8be471201ef0a89c4cf6e` | `FINALIZED`, `SUCCESS` | initially `LOCKED`; `REAL-000002-A01`; `FAA Order JO 7400.11K`; `EDITION_APPLIES`; effective `2025-09-15` to `2026-09-15` |
+| Assess after | `0x2f11767c1e970db8efdfb4bd24b321d9980cb86c282d4e20891f89448c42d4bf` | `FINALIZED`, `SUCCESS` | `LOCKED`; `REAL-000003-A01`; `FAA Order JO 7400.11K`; all consequential official sources `HTTP_200` |
+| Bind integration | `0xf56e1fd8fe35f553d1f607dc43a4abbe14ad793fa46423397d2924b160c524e7` | `FINALIZED`, `SUCCESS` | namespace `boundary-lineage-20260827` bound to `REAL-000002` |
+| Create successor | `0xec22663e810accffe6a5b3d5678664680fb19b6f2cff067601690d14b7307b93` | `FINALIZED`, `SUCCESS` | `REAL-000004.predecessor_case_id = REAL-000002` |
+| Freeze successor | `0x434acffd5d0952666ec6ca1354d1cf0256abdc9f681176544d9a16bd2f8e0d5a` | `FINALIZED`, `SUCCESS` | `REAL-000004`, `FROZEN` |
+| Assess successor | `0x8688bdb6326c88d0d12ace3c9b23ba19f5b755571933c4f899f2c07f68cfc1b3` | `FINALIZED`, `SUCCESS` after retained intermediate `NO_MAJORITY`/`COMMITTING` observation | successor `LOCKED`, edition J; predecessor `SUPERSEDED_BY_SUCCESSOR` |
+| Advance integration | `0x3b898b3b39163ecc27ca3afcb4720969c960fe5e0003b42df3b725229744d862` | `FINALIZED`, `SUCCESS` | current `REAL-000004`; previous `REAL-000002`; `BOUND_TO_CASE` |
+
+All three boundary assessments and the successor assessment independently fetched the authoritative dated eCFR full-section payload and exact Federal Register evidence. Consequential source statuses were `HTTP_200`; stored authority metadata came from exact official documents.
+
+### Isolated upgrade rehearsal and authorization boundary
+
+| Step | Transaction | Final result | Authoritative readback |
+|---|---|---|---|
+| Deploy rehearsal | `0xa567caadd878e028a0a6be478b6287d09b8a36573a8134dc0144e179579871c7` | `FINALIZED`, `SUCCESS` | address `0xeF15ce6DD33341fb9D2Bbf35b0668090a556680f`; locked upgrader |
+| Same-code upgrade | `0x412af4e29bbbb7e29837638fd6245170d8a4da2b0f4166ad017bc73c2edf8f4e` | `FINALIZED`, `MAJORITY_AGREE` | post-upgrade source hash exact; upgrader locked; `get_case_count() = 0` |
+| Unauthorized exact-code upgrade | `0xce505e3f6ef74a463882cacf7e20a9a544f3b427d01e24403b471e99efd68190` | distinct actor `0x22A2906BB59A1DFaEEAD6148eba7dB24d6F22FB1`; `FINALIZED`, execution `ERROR`, consensus result `6` | validator result decodes to `UPGRADE_NOT_AUTHORIZED`; source hash, upgrader, and `get_case_count() = 0` unchanged |
+
+Retained failed UI attempt: clicking Studio's top-level upgrade flow once issued only a schema probe with malformed/empty editor content and failed before signing as `invalid_contract absent_runner_comment`; it created no transaction and changed no state. The explicit `upgrade(bytes)` method then produced the distinct unauthorized transaction above.
+
+---
+
 > Historical ledger: every transaction below belongs to the superseded source hash `F46CC3F52867E1B78517789074B46FBA34B23171F00EDAFCE40AC80CEC433814`. It is retained to preserve failed attempts and diagnosis, but it is not claimed as live proof for source commit `b4aff7156b03dc040eb298290f276057cce47359` / hash `E6466FDED2D1FF2195E4710AB78FD35DEFFF1F51EF97953B791853BE7E284B23`.
 
 ## Exact revision binding

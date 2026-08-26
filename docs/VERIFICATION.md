@@ -36,6 +36,8 @@ Current independently reproduced result: **24 passed** with 6 expected unused do
 
 Studionet schema extraction additionally requires the text-runner version header `# v0.1.0` before the pinned runner dependency. The corrected source reaches the no-parameter deployment screen; the previous header-only form failed before signing with `invalid_contract absent_runner_comment`.
 
+Current exact-revision Studionet result: deployment, deployed-source parity, finalized upgrader readback, terminal before/at/after boundary assessments, successor lock, predecessor supersession, integration advancement, isolated same-code upgrade/state preservation, and distinct unauthorized-upgrade rejection all pass. Exact transactions and readbacks are recorded in `docs/STUDIONET-EVIDENCE.md`.
+
 ---
 
 ## 2. Frontend Automated Verification

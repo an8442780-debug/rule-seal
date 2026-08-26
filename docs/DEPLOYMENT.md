@@ -14,13 +14,27 @@
 - Source SHA-256: `E6466FDED2D1FF2195E4710AB78FD35DEFFF1F51EF97953B791853BE7E284B23`
 - GenVM text-runner version header: `# v0.1.0`
 - Linked contracts: none
-- Contract address: pending fresh `PRE_DEPLOY` approval
-- Deployment transaction: pending fresh `PRE_DEPLOY` approval
-- Explorer: pending fresh `PRE_DEPLOY` approval
+- PRE_DEPLOY reviewer verdict: `APPROVED` for the exact source commit/hash/account above
+- Contract address: `0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae`
+- Deployment transaction: `0xd0589df3c0ccfacd875895362d61028b6a678381b6a94caac40dd8861464d695`
+- Explorer: `https://explorer-studio.genlayer.com/address/0xb9E09Ff1596E1Fe4553CE047E10B44514f0928ae`
+- Deployment result: `FINALIZED`, execution `SUCCESS`, consensus `MAJORITY_AGREE`
+- Deployed code SHA-256: `E6466FDED2D1FF2195E4710AB78FD35DEFFF1F51EF97953B791853BE7E284B23`
+- Finalized `get_upgrader()` readback: `0x34b92E6553eaCA11A00A9d86d75d8a7881779D78`
 
 Changing the source, constructor, dependency header, classification, or locked account invalidates the `PRE_DEPLOY` package and requires a new review.
 
-The prior deployment remains historical evidence only. Its exact-date versions-index dependency returned an empty `content_versions` list on unchanged dates, even though the authoritative dated full-section endpoint returned `HTTP_200`. The corrected source uses that point-in-time full endpoint directly; it does not weaken the exact Federal Register discovery, identity checks, validator refetch, or consequential equality rules. A fresh approval and deployment are required before this revision can become the release instance.
+This exact revision replaces the historical deployment. Its point-in-time full-section endpoint resolves unchanged eCFR dates without relying on an empty amendment-date index, while retaining exact Federal Register discovery, identity checks, validator refetch, and consequential equality rules. The complete current matrix is in `docs/STUDIONET-EVIDENCE.md`.
+
+## Safe upgrade rehearsal for the release revision
+
+- Isolated rehearsal address: `0xeF15ce6DD33341fb9D2Bbf35b0668090a556680f`
+- Deploy transaction: `0xa567caadd878e028a0a6be478b6287d09b8a36573a8134dc0144e179579871c7` (`FINALIZED`, `SUCCESS`)
+- Same-code upgrade: `0x412af4e29bbbb7e29837638fd6245170d8a4da2b0f4166ad017bc73c2edf8f4e` (`FINALIZED`, `MAJORITY_AGREE`)
+- Post-upgrade code SHA-256: `E6466FDED2D1FF2195E4710AB78FD35DEFFF1F51EF97953B791853BE7E284B23`
+- Post-upgrade finalized readbacks: upgrader remains the locked account; `get_case_count()` is `0`.
+- Unauthorized exact-code upgrade from `0x22A2906BB59A1DFaEEAD6148eba7dB24d6F22FB1`: `0xce505e3f6ef74a463882cacf7e20a9a544f3b427d01e24403b471e99efd68190`, `FINALIZED`, execution `ERROR`, consensus result `6`, exact validator error `UPGRADE_NOT_AUTHORIZED`.
+- After rejection: code hash, upgrader, and zero-case state are unchanged.
 
 ## Recovery limits
 
