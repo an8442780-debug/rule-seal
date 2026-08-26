@@ -76,7 +76,7 @@ Current verified results:
 
 - Contract Direct Mode: 24 passed; six documented fail-fast unused-mock warnings.
 - GenVM lint: three checks passed; semantic validation passed for 23 public methods.
-- Frontend Vitest: five files, 36 tests passed.
+- Frontend Vitest: five files, 37 tests passed.
 - TypeScript and Vite production build: passed; the documented approximately 772 KB bundle warning remains non-blocking.
 - Studionet: exact-source deployment and 18-transaction live evidence ledger independently approved at `POST_DEPLOY_TEST`.
 

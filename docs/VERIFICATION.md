@@ -4,6 +4,7 @@ This document defines the formal verification procedures, automated test matrice
 
 ## Release identity
 
+- Exact final revision binding: immutable Git tag `v1.0.0` on the public repository. The tag must resolve to the exact commit named in the final review package; moving or replacing the tag invalidates this evidence.
 - Deployed source commit: `b4aff7156b03dc040eb298290f276057cce47359`
 - POST_DEPLOY_TEST evidence commit: `93a1466d99bb40218220f8646719c78ea4e3003f`
 - Contract SHA-256: `E6466FDED2D1FF2195E4710AB78FD35DEFFF1F51EF97953B791853BE7E284B23`
