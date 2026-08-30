@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="1024" height="1024" role="img" aria-label="Regulatory edition applicability lock">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#172554"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#1e40af"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.35" r="0.62">
+      <stop offset="0" stop-color="#60a5fa" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#60a5fa" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="shieldClip">
+      <path d="M256 72 402 126v128c0 91-62 151-146 186-84-35-146-95-146-186V126Z"/>
+    </clipPath>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#glow)"/>
+  <path d="M256 72 402 126v128c0 91-62 151-146 186-84-35-146-95-146-186V126Z" fill="url(#shield)" stroke="#dbeafe" stroke-width="18" stroke-linejoin="round"/>
+  <g clip-path="url(#shieldClip)" fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M154 214h204" stroke-width="18"/>
+    <path d="M154 274h204" stroke-width="18"/>
+    <path d="M154 334h124" stroke-width="18"/>
+    <path d="M256 146v188" stroke="#fbbf24" stroke-width="18"/>
+  </g>
+  <circle cx="256" cy="214" r="28" fill="#fbbf24" stroke="#fff" stroke-width="12"/>
+  <circle cx="256" cy="274" r="28" fill="#fbbf24" stroke="#fff" stroke-width="12"/>
+  <circle cx="256" cy="334" r="28" fill="#fbbf24" stroke="#fff" stroke-width="12"/>
+</svg>
