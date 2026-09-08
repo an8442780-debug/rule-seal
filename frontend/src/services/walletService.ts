@@ -3,19 +3,38 @@ import { EIP6963ProviderDetail, WalletState } from '../types/domain.ts';
 
 type Listener = (state: WalletState) => void;
 
+export const WALLET_SESSION_STATE_MACHINE = true;
+export type WalletPhase = 'DISCONNECTED' | 'DISCOVERING' | 'CHOOSER_OPEN' | 'CONNECTING' |
+  'CONNECTED' | 'WRONG_CHAIN' | 'ERROR';
+type WalletSessionState = WalletState & {
+  phase: WalletPhase;
+  error: string | null;
+  writeClientBinding: { provider: any; address: string } | null;
+};
+
+export const selectWalletView = (state: WalletSessionState) => ({
+  phase: state.phase,
+  canWrite: state.phase === 'CONNECTED' && Boolean(state.writeClientBinding),
+  needsChainSwitch: state.phase === 'WRONG_CHAIN',
+  showConnect: state.phase !== 'CONNECTED' && state.phase !== 'WRONG_CHAIN',
+});
+
 const STRICT_RDNS_ALLOWLIST = ['io.metamask', 'com.okex.wallet', 'io.rabby'];
 
 export class WalletService {
   private static instance: WalletService;
   private announcedProviders: Map<string, EIP6963ProviderDetail> = new Map();
   private activeListenersCleanup: (() => void) | null = null;
-  private state: WalletState = {
+  private state: WalletSessionState = {
+    phase: 'DISCONNECTED',
     connected: false,
     address: null,
     chainId: null,
     provider: null,
     providerName: null,
     isCorrectChain: false,
+    error: null,
+    writeClientBinding: null,
   };
   private listeners: Set<Listener> = new Set();
 
@@ -32,6 +51,11 @@ export class WalletService {
 
   public initEIP6963(): () => void {
     if (typeof window === 'undefined') return () => {};
+
+    if (this.state.phase === 'DISCONNECTED') {
+      this.state = { ...this.state, phase: 'DISCOVERING', error: null };
+      this.notifyListeners();
+    }
 
     const handleAnnouncement = (event: any) => {
       if (!event.detail || !event.detail.info || !event.detail.provider) return;
@@ -94,12 +118,32 @@ export class WalletService {
     return { ...this.state };
   }
 
+  public getWalletState(): WalletSessionState {
+    return { ...this.state };
+  }
+
   public subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
     listener(this.getState());
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  public subscribeWalletState(listener: (state: WalletSessionState) => void): () => void {
+    return this.subscribe((state) => listener(state as WalletSessionState));
+  }
+
+  public openChooser(): void {
+    if (this.state.phase === 'CONNECTED' || this.state.phase === 'WRONG_CHAIN') return;
+    this.state = { ...this.state, phase: 'CHOOSER_OPEN', error: null };
+    this.notifyListeners();
+  }
+
+  public closeChooser(): void {
+    if (this.state.phase !== 'CHOOSER_OPEN') return;
+    this.state = { ...this.state, phase: 'DISCOVERING' };
+    this.notifyListeners();
   }
 
   private notifyListeners(): void {
@@ -119,29 +163,38 @@ export class WalletService {
       this.activeListenersCleanup = null;
     }
 
-    const accounts: string[] = await provider.request({
-      method: 'eth_requestAccounts',
-    });
+    this.state = { ...this.state, phase: 'CONNECTING', connected: false, error: null, writeClientBinding: null };
+    this.notifyListeners();
 
-    if (!accounts || accounts.length === 0) {
-      throw new Error('NO_ACCOUNTS_RETURNED');
-    }
-    if (!/^0x[0-9a-fA-F]{40}$/.test(accounts[0])) {
-      throw new Error('INVALID_ACCOUNT_ADDRESS');
+    let accounts: string[];
+    let rawChainId: string;
+    try {
+      await provider.request({ method: 'eth_requestAccounts' });
+      accounts = await provider.request({ method: 'eth_accounts' });
+      rawChainId = await provider.request({ method: 'eth_chainId' });
+      if (!accounts || accounts.length === 0) throw new Error('NO_ACCOUNTS_RETURNED');
+      if (!/^0x[0-9a-fA-F]{40}$/.test(accounts[0])) throw new Error('INVALID_ACCOUNT_ADDRESS');
+    } catch (error: any) {
+      this.state = { ...this.state, phase: 'ERROR', connected: false, provider: null,
+        address: null, chainId: null, providerName: null, isCorrectChain: false,
+        writeClientBinding: null, error: error?.message || 'WALLET_CONNECTION_FAILED' };
+      this.notifyListeners();
+      throw error;
     }
 
-    const rawChainId: string = await provider.request({
-      method: 'eth_chainId',
-    });
     const chainId = parseInt(rawChainId, 16);
+    const isCorrectChain = chainId === STUDIONET_CONFIG.chainId;
 
     this.state = {
+      phase: isCorrectChain ? 'CONNECTED' : 'WRONG_CHAIN',
       connected: true,
       address: accounts[0],
       chainId,
       provider,
       providerName: providerDetail.info.name,
-      isCorrectChain: chainId === STUDIONET_CONFIG.chainId,
+      isCorrectChain,
+      error: null,
+      writeClientBinding: isCorrectChain ? { provider, address: accounts[0] } : null,
     };
 
     // Attach listeners on this exact provider with exact callback references
@@ -149,15 +202,28 @@ export class WalletService {
       if (!newAccounts || newAccounts.length === 0) {
         this.disconnect();
       } else {
-        this.state.address = newAccounts[0];
+        const address = newAccounts[0];
+        if (!/^0x[0-9a-fA-F]{40}$/.test(address)) { this.disconnect(); return; }
+        this.state = {
+          ...this.state,
+          address,
+          writeClientBinding: this.state.isCorrectChain ? { provider, address } : null,
+        };
         this.notifyListeners();
       }
     };
 
     const handleChainChanged = (newChainHex: string) => {
       const newChain = parseInt(newChainHex, 16);
-      this.state.chainId = newChain;
-      this.state.isCorrectChain = newChain === STUDIONET_CONFIG.chainId;
+      const isCorrectChain = newChain === STUDIONET_CONFIG.chainId;
+      this.state = {
+        ...this.state,
+        chainId: newChain,
+        isCorrectChain,
+        phase: isCorrectChain ? 'CONNECTED' : 'WRONG_CHAIN',
+        writeClientBinding: isCorrectChain && this.state.address
+          ? { provider, address: this.state.address } : null,
+      };
       this.notifyListeners();
     };
 
@@ -225,10 +291,18 @@ export class WalletService {
       const newChain = parseInt(rawChainId, 16);
       this.state.chainId = newChain;
       this.state.isCorrectChain = newChain === STUDIONET_CONFIG.chainId;
+      this.state.phase = this.state.isCorrectChain ? 'CONNECTED' : 'WRONG_CHAIN';
+      this.state.writeClientBinding = this.state.isCorrectChain && this.state.address
+        ? { provider: this.state.provider, address: this.state.address } : null;
       this.notifyListeners();
       if (!this.state.isCorrectChain) throw new Error('CHAIN_SWITCH_NOT_CONFIRMED');
     } catch (err) {
-      console.warn('Failed to re-read chainId after switch:', err);
+      this.state.phase = 'WRONG_CHAIN';
+      this.state.isCorrectChain = false;
+      this.state.writeClientBinding = null;
+      this.state.error = err instanceof Error ? err.message : 'CHAIN_SWITCH_NOT_CONFIRMED';
+      this.notifyListeners();
+      throw err;
     }
   }
 
@@ -243,15 +317,21 @@ export class WalletService {
     }
 
     this.state = {
+      phase: 'DISCONNECTED',
       connected: false,
       address: null,
       chainId: null,
       provider: null,
       providerName: null,
       isCorrectChain: false,
+      error: null,
+      writeClientBinding: null,
     };
     this.notifyListeners();
   }
 }
 
 export const walletService = WalletService.getInstance();
+export const getWalletState = () => walletService.getWalletState();
+export const subscribeWalletState = (listener: (state: WalletSessionState) => void) =>
+  walletService.subscribeWalletState(listener);

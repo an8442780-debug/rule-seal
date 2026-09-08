@@ -79,7 +79,13 @@ export const App: React.FC = () => {
 
   const handleOpenWalletModal = () => {
     setDiscoveredProviders(walletService.getDiscoveredProviders());
+    walletService.openChooser();
     setIsWalletModalOpen(true);
+  };
+
+  const handleCloseWalletModal = () => {
+    walletService.closeChooser();
+    setIsWalletModalOpen(false);
   };
 
   const handleSelectCase = async (caseId: string) => {
@@ -308,7 +314,7 @@ export const App: React.FC = () => {
       {/* Modals */}
       <WalletModal
         isOpen={isWalletModalOpen}
-        onClose={() => setIsWalletModalOpen(false)}
+        onClose={handleCloseWalletModal}
         providers={discoveredProviders}
         onSelectProvider={(p) => walletService.connectProvider(p)}
       />

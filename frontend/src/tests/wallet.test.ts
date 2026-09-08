@@ -1,15 +1,41 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { walletService } from '../services/walletService.ts';
+import { getWalletState, selectWalletView, walletService } from '../services/walletService.ts';
 
 describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
   beforeEach(() => {
     walletService.disconnect();
     walletService.clearDiscoveredProviders();
+    delete (window as any).ethereum;
+    delete (window as any).okxwallet;
     vi.restoreAllMocks();
   });
 
   afterEach(() => {
+    delete (window as any).ethereum;
+    delete (window as any).okxwallet;
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    [[]],
+    [['io.metamask']],
+    [['com.okex.wallet']],
+    [['io.rabby']],
+    [['io.metamask', 'com.okex.wallet']],
+    [['io.metamask', 'io.rabby']],
+    [['com.okex.wallet', 'io.rabby']],
+    [['io.metamask', 'com.okex.wallet', 'io.rabby']],
+  ])('discovers the exact provider cardinality for %j', (rdnsSet) => {
+    const cleanup = walletService.initEIP6963();
+    for (const [index, rdns] of rdnsSet.entries()) {
+      window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: {
+        info: { uuid: `cardinality-${index}`, name: rdns, icon: '', rdns },
+        provider: { request: vi.fn() },
+      }}));
+    }
+    expect(walletService.getDiscoveredProviders().map((entry) => entry.info.rdns).sort())
+      .toEqual([...rdnsSet].sort());
+    cleanup();
   });
 
   it('initializes EIP-6963 listener and discovers allowlisted wallet providers (MetaMask, OKX, Rabby)', () => {
@@ -77,7 +103,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
     cleanup();
   });
 
-  it('deduplicates announcements by UUID and provider identity', () => {
+  it('deduplicates duplicate announcement events by UUID and provider identity', () => {
     const cleanup = walletService.initEIP6963();
     const sharedProvider = { request: vi.fn() };
 
@@ -126,7 +152,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
   it('connects to provider, validates chain ID, and updates state without ambient guessing', async () => {
     const mockAccounts = ['0x1111111111111111111111111111111111111111'];
     const mockRequest = vi.fn().mockImplementation(async ({ method }) => {
-      if (method === 'eth_requestAccounts') return mockAccounts;
+      if (method === 'eth_requestAccounts' || method === 'eth_accounts') return mockAccounts;
       if (method === 'eth_chainId') return '0xf22f'; // 61999 in hex
       return null;
     });
@@ -166,7 +192,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
     });
 
     const mockRequest = vi.fn().mockImplementation(async ({ method }) => {
-      if (method === 'eth_requestAccounts') return mockAccounts;
+      if (method === 'eth_requestAccounts' || method === 'eth_accounts') return mockAccounts;
       if (method === 'eth_chainId') return '0xf22f';
       return null;
     });
@@ -180,6 +206,22 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
     expect(onMock).toHaveBeenCalledWith('accountsChanged', expect.any(Function));
     expect(onMock).toHaveBeenCalledWith('chainChanged', expect.any(Function));
     expect(onMock).toHaveBeenCalledWith('disconnect', expect.any(Function));
+
+    listeners.accountsChanged(['0x2222222222222222222222222222222222222222']);
+    expect(getWalletState()).toEqual(expect.objectContaining({
+      phase: 'CONNECTED',
+      address: '0x2222222222222222222222222222222222222222',
+    }));
+    expect(getWalletState().writeClientBinding?.address)
+      .toBe('0x2222222222222222222222222222222222222222');
+
+    listeners.chainChanged('0x1');
+    expect(getWalletState().phase).toBe('WRONG_CHAIN');
+    expect(getWalletState().writeClientBinding).toBeNull();
+
+    listeners.chainChanged('0xf22f');
+    expect(getWalletState().phase).toBe('CONNECTED');
+    expect(getWalletState().writeClientBinding?.provider).toBe(mockDetail.provider);
 
     walletService.disconnect();
     expect(removeListenerMock).toHaveBeenCalledWith('accountsChanged', expect.any(Function));
@@ -196,7 +238,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
     let currentChainHex = '0x1'; // mainnet
     let chainAdded = false;
     const mockRequest = vi.fn().mockImplementation(async ({ method, params }) => {
-      if (method === 'eth_requestAccounts') return ['0x1111111111111111111111111111111111111111'];
+      if (method === 'eth_requestAccounts' || method === 'eth_accounts') return ['0x1111111111111111111111111111111111111111'];
       if (method === 'eth_chainId') return currentChainHex;
       if (method === 'wallet_switchEthereumChain') {
         if (!chainAdded) {
@@ -231,5 +273,96 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
     const updatedState = walletService.getState();
     expect(updatedState.chainId).toBe(61999);
     expect(updatedState.isCorrectChain).toBe(true);
+  });
+
+  it('keeps a late announcement visible while CHOOSER_OPEN without requesting accounts', () => {
+    const cleanup = walletService.initEIP6963();
+    walletService.openChooser();
+    const request = vi.fn();
+    window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: {
+      info: { uuid: 'late-okx', name: 'OKX Wallet', icon: '', rdns: 'com.okex.wallet' },
+      provider: { request },
+    }}));
+    expect(getWalletState().phase).toBe('CHOOSER_OPEN');
+    expect(walletService.getDiscoveredProviders()).toHaveLength(1);
+    expect(request).not.toHaveBeenCalled();
+    cleanup();
+  });
+
+  it('commits CONNECTED write client identity atomically to the selected provider', async () => {
+    const address = '0x1111111111111111111111111111111111111111';
+    const provider = { request: vi.fn(async ({ method }) => {
+      if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [address];
+      if (method === 'eth_chainId') return '0xf22f';
+      return null;
+    }), on: vi.fn(), removeListener: vi.fn() };
+    await walletService.connectProvider({
+      info: { uuid: 'selected-rabby', name: 'Rabby', icon: '', rdns: 'io.rabby' }, provider,
+    });
+    const state = getWalletState();
+    expect(state.phase).toBe('CONNECTED');
+    expect(state.writeClientBinding).toEqual({ provider, address });
+    expect(selectWalletView(state)).toEqual(expect.objectContaining({ canWrite: true, showConnect: false }));
+  });
+
+  it('enters WRONG_CHAIN and disables the write client until explicit recovery', async () => {
+    const address = '0x1111111111111111111111111111111111111111';
+    const provider = { request: vi.fn(async ({ method }) => {
+      if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [address];
+      if (method === 'eth_chainId') return '0x1';
+      return null;
+    }), on: vi.fn(), removeListener: vi.fn() };
+    await walletService.connectProvider({
+      info: { uuid: 'wrong-chain', name: 'MetaMask', icon: '', rdns: 'io.metamask' }, provider,
+    });
+    const state = getWalletState();
+    expect(state.phase).toBe('WRONG_CHAIN');
+    expect(state.writeClientBinding).toBeNull();
+    expect(selectWalletView(state).needsChainSwitch).toBe(true);
+  });
+
+  it('starts DISCONNECTED after reload and performs no automatic resubmit', () => {
+    walletService.disconnect();
+    const state = getWalletState();
+    expect(state.phase).toBe('DISCONNECTED');
+    expect(state.writeClientBinding).toBeNull();
+  });
+
+  it('enters ERROR and clears provider identity when account access is rejected', async () => {
+    const provider = {
+      request: vi.fn().mockRejectedValue(new Error('User rejected the request.')),
+      on: vi.fn(),
+      removeListener: vi.fn(),
+    };
+    await expect(walletService.connectProvider({
+      info: { uuid: 'rejected', name: 'OKX Wallet', icon: '', rdns: 'com.okex.wallet' },
+      provider,
+    })).rejects.toThrow('User rejected the request.');
+    expect(getWalletState()).toEqual(expect.objectContaining({
+      phase: 'ERROR', connected: false, provider: null, writeClientBinding: null,
+    }));
+  });
+
+  it('disconnects atomically when accountsChanged removes every account', async () => {
+    const listeners: Record<string, Function> = {};
+    const provider = {
+      request: vi.fn(async ({ method }) => {
+        if (method === 'eth_requestAccounts' || method === 'eth_accounts') {
+          return ['0x1111111111111111111111111111111111111111'];
+        }
+        if (method === 'eth_chainId') return '0xf22f';
+        return null;
+      }),
+      on: vi.fn((event, callback) => { listeners[event] = callback; }),
+      removeListener: vi.fn(),
+    };
+    await walletService.connectProvider({
+      info: { uuid: 'removed', name: 'Rabby', icon: '', rdns: 'io.rabby' }, provider,
+    });
+    listeners.accountsChanged([]);
+    expect(getWalletState()).toEqual(expect.objectContaining({
+      phase: 'DISCONNECTED', connected: false, address: null, provider: null,
+      writeClientBinding: null,
+    }));
   });
 });

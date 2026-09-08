@@ -25,6 +25,7 @@ interface Props {
 }
 
 export const TransactionStatusModal: React.FC<Props> = ({ isOpen, step, detail, onClose }) => {
+  // The matching CSS keeps status text visible while prefers-reduced-motion disables rotation.
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const isPending = PHASES.includes(step) && step !== 'SUCCESS';

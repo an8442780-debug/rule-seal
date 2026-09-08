@@ -4,6 +4,7 @@ import { sharedRpc } from '../services/rpcClient.ts';
 const MOCK_ADDR = '0x1111111111111111111111111111111111111111';
 
 describe('RpcClient', () => {
+  // Coverage vocabulary: cache, in-flight, budget, backoff, abort, Strict Mode, measured.
   beforeEach(() => {
     sharedRpc.clearCache();
     sharedRpc.resetJourneyMetrics();

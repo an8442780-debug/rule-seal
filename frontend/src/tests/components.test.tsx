@@ -118,7 +118,7 @@ describe('Mounted Page Components & User Workflows', () => {
     expect(localStorage.getItem(JOURNAL_STORAGE_KEY)).toBe('{broken');
   });
 
-  it('renders Header with disconnected state and responds to connect click', async () => {
+  it('renders the Connect wallet action only for disconnected Header state', async () => {
     const mockOpenModal = vi.fn();
     const mockDisconnect = vi.fn();
     const mockSwitchChain = vi.fn();

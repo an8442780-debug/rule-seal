@@ -4,7 +4,7 @@
 
 Implementation is unfinished. No RuleSeal deployment, production release, final tag or live E2E is verified here. Inherited tags and another application's transactions cannot close RuleSeal gates.
 
-Candidate contract SHA-256: `2AEA0BBA3BF62EB052CD677A7007A1D40C57EB3F6E71585EC44C7B2E5DF8DF4E`.
+Candidate canonical LF contract SHA-256: `5A2B820886BB776B5E8C7E1C1FEBC0CA6B4C661F661352B87F100CE04FCD9C0A`. `.gitattributes` enforces LF so the reviewed Git blob, deployable checkout and future RPC code can be compared as raw bytes. The earlier diagnostic CRLF deployment hash `2AEA0BBA3BF62EB052CD677A7007A1D40C57EB3F6E71585EC44C7B2E5DF8DF4E` is not acceptance provenance.
 This identifies source bytes, not an approved deployment. The worktree is not a final revision.
 
 ## Local checks
@@ -19,7 +19,7 @@ npm run build
 
 Contract suite: 26 cases, including three successor outcomes. Six existing unused downstream-web-mock warnings remain disclosed. Record final reruns with exact file hashes; do not treat test counts as complete coverage.
 
-Frontend suite: 5 test files / 83 tests passed after the transaction-journal, identity-bound readback, wallet-discovery and modal-progress repairs. TypeScript and the Vite production build pass; the approximately 799 kB bundle warning remains documented and is not treated as a functional pass.
+Frontend suite: 5 test files / 97 tests passed after the transaction-journal, identity-bound readback, complete wallet-discovery cardinality/session-event coverage and modal-progress repairs. TypeScript and the Vite production build pass; the approximately 801 kB bundle warning remains documented and is not treated as a functional pass.
 
 [Official testing documentation](https://docs.genlayer.com/developers/intelligent-contracts/testing), checked 2026-09-09, distinguishes in-process Direct Mode from network integration.
 
