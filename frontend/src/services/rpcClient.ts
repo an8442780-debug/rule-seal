@@ -48,6 +48,7 @@ export class RpcClient {
 
   public clearCache(): void {
     this.cache.clear();
+    this.inFlight.clear();
   }
 
   public invalidateMethod(method: string): void {
@@ -55,6 +56,9 @@ export class RpcClient {
       if (key.includes(`:${method}:`)) {
         this.cache.delete(key);
       }
+    }
+    for (const key of this.inFlight.keys()) {
+      if (key.includes(`:${method}:`)) this.inFlight.delete(key);
     }
   }
 
@@ -90,7 +94,7 @@ export class RpcClient {
       return this.inFlight.get(key);
     }
 
-    const fetchPromise = this.executeWithRetry(async () => {
+    const fetchPromise: Promise<any> = this.executeWithRetry(async () => {
       this.trackJourneyCall(journey);
       const res = await this.client.readContract({
         address: targetAddress,
@@ -98,14 +102,17 @@ export class RpcClient {
         args,
       });
       return res;
-    })
+    }, (): boolean => this.inFlight.get(key) === fetchPromise)
       .then((data) => {
+        if (this.inFlight.get(key) !== fetchPromise) {
+          throw new Error('RPC_READ_INVALIDATED: Request a fresh read.');
+        }
         this.cache.set(key, { data, expiresAt: Date.now() + 10_000 });
         this.inFlight.delete(key);
         return data;
       })
       .catch((err) => {
-        this.inFlight.delete(key);
+        if (this.inFlight.get(key) === fetchPromise) this.inFlight.delete(key);
         throw err;
       });
 
@@ -113,19 +120,20 @@ export class RpcClient {
     return fetchPromise;
   }
 
-  private async executeWithRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  private async executeWithRetry<T>(fn: () => Promise<T>, isCurrent: () => boolean): Promise<T> {
     let attempt = 0;
-    while (attempt < maxRetries) {
+    while (attempt < 3) {
+      if (attempt > 0 && !isCurrent()) throw new Error('RPC_READ_INVALIDATED: Request a fresh read.');
       try {
         return await fn();
       } catch (err: any) {
         attempt++;
         const msg = String(err?.message || err);
-        const isRateLimit = msg.includes('429') || msg.includes('rate limit');
-        const isServerError = msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('504');
+        const status = Number(err?.status ?? err?.statusCode ?? err?.response?.status ?? msg.match(/\bHTTP\s+(\d{3})\b/i)?.[1]);
+        const retryable = status === 429 || (status >= 500 && status <= 599);
 
-        if ((isRateLimit || isServerError) && attempt < maxRetries) {
-          const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 200, 10000);
+        if (retryable && attempt < 3) {
+          const delay = (attempt === 1 ? 1000 : 3000) + Math.random() * 200;
           await new Promise((resolve) => setTimeout(resolve, delay));
           continue;
         }

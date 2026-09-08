@@ -24,6 +24,37 @@ function formatSafeError(err: any): string {
   }
 }
 
+export class VerifiedTerminalFailure extends Error {}
+
+function hasCaseIdentity(record: CaseRecord, id?: string): boolean {
+  return Boolean(record && typeof record.case_id === 'string' && record.case_id.trim() &&
+    (id === undefined || record.case_id === id) &&
+    ['DRAFT', 'FROZEN', 'LOCKED', 'NOT_APPLICABLE', 'UNRESOLVED', 'SUPERSEDED_BY_SUCCESSOR'].includes(record.state));
+}
+
+function matchesCreation(record: CaseRecord, sender: string, params: Record<string, any>): boolean {
+  return hasCaseIdentity(record) && record.owner?.toLowerCase() === sender.toLowerCase() &&
+    record.client_nonce === params.clientNonce && record.part === params.part && record.section === params.section &&
+    record.activity_date === params.activityDate && record.standard_designation_hint === params.designationHint.trim();
+}
+
+function matchesSuccessor(successor: CaseRecord, predecessor: CaseRecord, sender: string, params: Record<string, any>): boolean {
+  return hasCaseIdentity(successor) && hasCaseIdentity(predecessor, params.oldCaseId) &&
+    successor.case_id !== predecessor.case_id && successor.owner?.toLowerCase() === sender.toLowerCase() &&
+    successor.client_nonce === params.clientNonce && successor.activity_date === params.newActivityDate &&
+    successor.predecessor_case_id === predecessor.case_id && predecessor.successor_case_id === successor.case_id;
+}
+
+function matchesIntegration(record: IntegrationRecord, sender: string, namespace: string, caseId: string): boolean {
+  return Boolean(record && record.case_id === caseId && record.caller?.toLowerCase() === sender.toLowerCase() &&
+    record.namespace === namespace.trim() && record.state === 'ACTIVE');
+}
+
+function hasAssessment(record: CaseRecord, caseId: string): boolean {
+  return hasCaseIdentity(record, caseId) && ['LOCKED', 'NOT_APPLICABLE', 'UNRESOLVED', 'SUPERSEDED_BY_SUCCESSOR'].includes(record.state) &&
+    typeof record.current_assessment_id === 'string' && Boolean(record.current_assessment_id.trim());
+}
+
 export class ContractService {
   private static instance: ContractService;
 
@@ -117,26 +148,28 @@ export class ContractService {
   }
 
   public async verifyPendingOperation(op: PendingOperation): Promise<boolean> {
-    const wallet = walletService.getState();
+    if (!op.sender || op.chainId !== STUDIONET_CONFIG.chainId ||
+      op.contractAddress?.toLowerCase() !== this.getConfiguredContractAddress().toLowerCase()) return false;
     try {
       switch (op.type) {
         case 'create_case':
-          return (await this.getCaseByNonce(wallet.address || '', String(op.params.clientNonce), true)).case_id !== '';
+          return matchesCreation(await this.getCaseByNonce(op.sender, String(op.params.clientNonce), true), op.sender, op.params);
         case 'freeze_case':
-          return (await this.getCase(String(op.params.caseId), true)).state === 'FROZEN';
+        case 'retry_unresolved': {
+          const record = await this.getCase(String(op.params.caseId), true);
+          return hasCaseIdentity(record, op.params.caseId) && record.state === 'FROZEN';
+        }
         case 'assess_case': {
           const record = await this.getCase(String(op.params.caseId), true);
-          return !['DRAFT', 'FROZEN'].includes(record.state) && Boolean(record.current_assessment_id);
+          return hasAssessment(record, op.params.caseId);
         }
-        case 'retry_unresolved':
-          return (await this.getCase(String(op.params.caseId), true)).state === 'FROZEN';
         case 'create_successor': {
-          const successor = await this.getCaseByNonce(wallet.address || '', String(op.params.clientNonce), true);
+          const successor = await this.getCaseByNonce(op.sender, String(op.params.clientNonce), true);
           const predecessor = await this.getCase(String(op.params.oldCaseId), true);
-          return predecessor.successor_case_id === successor.case_id;
+          return matchesSuccessor(successor, predecessor, op.sender, op.params);
         }
         case 'activate_integration':
-          return (await this.getIntegration(wallet.address || '', String(op.params.namespace), true)).case_id === op.params.caseId;
+          return matchesIntegration(await this.getIntegration(op.sender, String(op.params.namespace).trim(), true), op.sender, op.params.namespace, op.params.caseId);
         default:
           return false;
       }
@@ -155,7 +188,7 @@ export class ContractService {
     designationHint: string,
     onStepChange?: (step: TxStep, detail?: any) => void
   ): Promise<{ caseId: string; txHash: string }> {
-    const { txHash, opId } = await this.executeWrite(
+    const { txHash, opId, sender } = await this.executeWrite(
       'create_case',
       [clientNonce, part, section, activityDate, designationHint],
       { clientNonce, part, section, activityDate, designationHint },
@@ -164,8 +197,10 @@ export class ContractService {
 
     try {
       // Authoritative readback before journal removal
-      const walletState = walletService.getState();
-      const caseRecord = await this.getCaseByNonce(walletState.address || '', clientNonce, true);
+      const caseRecord = await this.getCaseByNonce(sender, clientNonce, true);
+      if (!matchesCreation(caseRecord, sender, { clientNonce, part, section, activityDate, designationHint })) {
+        throw new Error('READBACK_MISMATCH: Created case identity does not match the submitted request');
+      }
       sharedRpc.invalidateMethod('get_case_count');
       sharedRpc.invalidateMethod('get_events');
 
@@ -173,7 +208,7 @@ export class ContractService {
       onStepChange?.('SUCCESS', { caseId: caseRecord.case_id, txHash });
       return { caseId: caseRecord.case_id, txHash };
     } catch (readErr: any) {
-      journalService.updateStatus(opId, 'SUBMITTED', formatSafeError(readErr));
+      this.reportReadbackFailure(opId, txHash, readErr, onStepChange);
       throw new Error(`AUTHORITATIVE_READBACK_FAILED: ${formatSafeError(readErr)}`);
     }
   }
@@ -187,7 +222,7 @@ export class ContractService {
     try {
       // Authoritative readback before journal removal
       const updated = await this.getCase(caseId, true);
-      if (updated.state !== 'FROZEN') {
+      if (!hasCaseIdentity(updated, caseId) || updated.state !== 'FROZEN') {
         throw new Error(`READBACK_MISMATCH: Expected FROZEN, got ${updated.state}`);
       }
       sharedRpc.invalidateMethod('get_case');
@@ -197,7 +232,7 @@ export class ContractService {
       onStepChange?.('SUCCESS', { caseId, txHash });
       return { txHash };
     } catch (readErr: any) {
-      journalService.updateStatus(opId, 'SUBMITTED', formatSafeError(readErr));
+      this.reportReadbackFailure(opId, txHash, readErr, onStepChange);
       throw new Error(`AUTHORITATIVE_READBACK_FAILED: ${formatSafeError(readErr)}`);
     }
   }
@@ -211,7 +246,7 @@ export class ContractService {
     try {
       // Authoritative readback before journal removal
       const updated = await this.getCase(caseId, true);
-      if (updated.state === 'DRAFT' || updated.state === 'FROZEN') {
+      if (!hasAssessment(updated, caseId)) {
         throw new Error(`READBACK_MISMATCH: Case ${caseId} did not advance from ${updated.state}`);
       }
       sharedRpc.invalidateMethod('get_case');
@@ -223,7 +258,7 @@ export class ContractService {
       onStepChange?.('SUCCESS', { assessmentId: updated.current_assessment_id, txHash });
       return { assessmentId: updated.current_assessment_id, txHash };
     } catch (readErr: any) {
-      journalService.updateStatus(opId, 'SUBMITTED', formatSafeError(readErr));
+      this.reportReadbackFailure(opId, txHash, readErr, onStepChange);
       throw new Error(`AUTHORITATIVE_READBACK_FAILED: ${formatSafeError(readErr)}`);
     }
   }
@@ -237,7 +272,7 @@ export class ContractService {
     try {
       // Authoritative readback before journal removal
       const updated = await this.getCase(caseId, true);
-      if (updated.state !== 'FROZEN') {
+      if (!hasCaseIdentity(updated, caseId) || updated.state !== 'FROZEN') {
         throw new Error(`READBACK_MISMATCH: Expected FROZEN after retry reservation, got ${updated.state}`);
       }
       sharedRpc.invalidateMethod('get_case');
@@ -247,7 +282,7 @@ export class ContractService {
       onStepChange?.('SUCCESS', { caseId, txHash });
       return { txHash };
     } catch (readErr: any) {
-      journalService.updateStatus(opId, 'SUBMITTED', formatSafeError(readErr));
+      this.reportReadbackFailure(opId, txHash, readErr, onStepChange);
       throw new Error(`AUTHORITATIVE_READBACK_FAILED: ${formatSafeError(readErr)}`);
     }
   }
@@ -258,7 +293,7 @@ export class ContractService {
     newActivityDate: string,
     onStepChange?: (step: TxStep, detail?: any) => void
   ): Promise<{ newCaseId: string; txHash: string }> {
-    const { txHash, opId } = await this.executeWrite(
+    const { txHash, opId, sender } = await this.executeWrite(
       'create_successor',
       [oldCaseId, clientNonce, newActivityDate],
       { oldCaseId, clientNonce, newActivityDate },
@@ -267,11 +302,10 @@ export class ContractService {
 
     try {
       // Authoritative readback before journal removal
-      const walletState = walletService.getState();
-      const newCase = await this.getCaseByNonce(walletState.address || '', clientNonce, true);
+      const newCase = await this.getCaseByNonce(sender, clientNonce, true);
       const oldCase = await this.getCase(oldCaseId, true);
 
-      if (oldCase.successor_case_id !== newCase.case_id) {
+      if (!matchesSuccessor(newCase, oldCase, sender, { oldCaseId, clientNonce, newActivityDate })) {
         throw new Error('READBACK_MISMATCH: Old case successor link missing');
       }
       sharedRpc.invalidateMethod('get_case_count');
@@ -282,7 +316,7 @@ export class ContractService {
       onStepChange?.('SUCCESS', { newCaseId: newCase.case_id, txHash });
       return { newCaseId: newCase.case_id, txHash };
     } catch (readErr: any) {
-      journalService.updateStatus(opId, 'SUBMITTED', formatSafeError(readErr));
+      this.reportReadbackFailure(opId, txHash, readErr, onStepChange);
       throw new Error(`AUTHORITATIVE_READBACK_FAILED: ${formatSafeError(readErr)}`);
     }
   }
@@ -292,7 +326,7 @@ export class ContractService {
     caseId: string,
     onStepChange?: (step: TxStep, detail?: any) => void
   ): Promise<{ txHash: string }> {
-    const { txHash, opId } = await this.executeWrite(
+    const { txHash, opId, sender } = await this.executeWrite(
       'activate_integration',
       [namespace, caseId],
       { namespace, caseId },
@@ -301,9 +335,8 @@ export class ContractService {
 
     try {
       // Authoritative readback before journal removal
-      const walletState = walletService.getState();
-      const integ = await this.getIntegration(walletState.address || '', namespace, true);
-      if (integ.case_id !== caseId) {
+      const integ = await this.getIntegration(sender, namespace.trim(), true);
+      if (!matchesIntegration(integ, sender, namespace, caseId)) {
         throw new Error('READBACK_MISMATCH: Integration case_id did not match');
       }
       sharedRpc.invalidateMethod('get_integration');
@@ -314,9 +347,17 @@ export class ContractService {
       onStepChange?.('SUCCESS', { namespace, caseId, txHash });
       return { txHash };
     } catch (readErr: any) {
-      journalService.updateStatus(opId, 'SUBMITTED', formatSafeError(readErr));
+      this.reportReadbackFailure(opId, txHash, readErr, onStepChange);
       throw new Error(`AUTHORITATIVE_READBACK_FAILED: ${formatSafeError(readErr)}`);
     }
+  }
+
+  private reportReadbackFailure(opId: string, txHash: string, error: unknown, onStepChange?: (step: TxStep, detail?: any) => void): void {
+    let persistenceDegraded = false;
+    try { journalService.updateStatus(opId, 'SUBMITTED', formatSafeError(error)); }
+    catch { persistenceDegraded = true; }
+    onStepChange?.('RECONCILIATION_REQUIRED', { txHash, persistenceDegraded,
+      message: 'The transaction result could not be verified. Keep its hash and continue verification; do not submit again.' });
   }
 
   private async executeWrite(
@@ -324,7 +365,7 @@ export class ContractService {
     args: any[],
     params: Record<string, any>,
     onStepChange?: (step: TxStep, detail?: any) => void
-  ): Promise<{ txHash: string; opId: string }> {
+  ): Promise<{ txHash: string; opId: string; sender: string }> {
     const configuredAddress = this.getConfiguredContractAddress();
     if (!configuredAddress) {
       throw new Error('CONTRACT_NOT_CONFIGURED');
@@ -347,10 +388,13 @@ export class ContractService {
       timestamp: Date.now(),
       params,
       status: 'PRE_SIGN',
+      sender: walletState.address,
+      chainId: STUDIONET_CONFIG.chainId,
+      contractAddress: targetAddress,
     };
 
     journalService.savePendingOperation(pendingOp);
-    onStepChange?.('SIGNING', { method, params });
+    onStepChange?.('WAITING_FOR_WALLET', { method, params });
 
     let txHash: string;
     try {
@@ -368,93 +412,94 @@ export class ContractService {
         value: 0n,
       });
     } catch (err: any) {
-      journalService.removeOperation(opId);
-      onStepChange?.('ERROR', { error: formatSafeError(err) });
+      const rejected = err?.code === 4001 || err?.cause?.code === 4001;
+      let cleaned = false;
+      if (rejected) {
+        try { journalService.removeOperation(opId); cleaned = true; } catch { /* retain reservation */ }
+      }
+      onStepChange?.(rejected && cleaned ? 'REJECTED' : 'RECONCILIATION_REQUIRED', {
+        message: rejected && cleaned ? 'You declined the wallet request.' : 'The wallet result is uncertain. Check wallet activity before another write. Do not resubmit.',
+      });
       throw err;
     }
 
     // Hash obtained: update journal to SUBMITTED
-    journalService.updateHash(opId, txHash);
-    onStepChange?.('SUBMITTED', { txHash });
+    let persistenceDegraded = false;
+    try { journalService.updateHash(opId, txHash); }
+    catch (error) {
+      if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+        onStepChange?.('RECONCILIATION_REQUIRED', { message: 'The wallet returned no valid transaction hash. Check wallet activity; do not resubmit.' });
+        throw error;
+      }
+      persistenceDegraded = true;
+    }
+    onStepChange?.('SUBMITTED', { txHash, persistenceDegraded });
 
     // Poll for finality and execution result
-    onStepChange?.('FINALIZING', { txHash });
+    onStepChange?.('WAITING_FOR_FINALITY', { txHash, persistenceDegraded });
     try {
-      await this.waitForFinalizedTransaction(txHash);
+      await this.waitForFinalizedTransaction(txHash, 300_000, () => onStepChange?.('VERIFYING_EXECUTION', { txHash, persistenceDegraded }));
     } catch (finErr: any) {
       const message = formatSafeError(finErr);
-      if (message.includes('TRANSACTION_EXECUTION_FAILED')) {
-        journalService.removeOperation(opId);
-      } else {
-        journalService.updateStatus(opId, 'SUBMITTED', message);
-      }
-      onStepChange?.('ERROR', { error: formatSafeError(finErr) });
+      let terminal = finErr instanceof VerifiedTerminalFailure;
+      try {
+        if (terminal) journalService.removeOperation(opId);
+        else journalService.updateStatus(opId, 'SUBMITTED', message);
+      } catch { persistenceDegraded = true; terminal = false; }
+      onStepChange?.(terminal ? 'FAILED' : 'RECONCILIATION_REQUIRED', { txHash, persistenceDegraded,
+        message: terminal ? 'The finalized transaction did not execute successfully.' : 'Verification stopped. Keep this transaction hash and check its status; do not resubmit.' });
       throw finErr;
     }
 
-    return { txHash, opId };
+    onStepChange?.('VERIFYING_READBACK', { txHash, persistenceDegraded });
+    return { txHash, opId, sender: walletState.address };
   }
 
-  public async waitForFinalizedTransaction(txHash: string, deadlineMs = 600_000): Promise<any> {
-    const startTime = Date.now();
-    let pollInterval = 2500;
-    while (Date.now() - startTime < deadlineMs) {
-      // Pause if tab is hidden
+  public async waitForFinalizedTransaction(
+    txHash: string, deadlineMs = 300_000, onFinalized?: () => void
+  ): Promise<any> {
+    const deadline = Date.now() + Math.min(deadlineMs, 300_000);
+    let interval = 2500;
+    for (let polls = 0; polls < 24 && Date.now() < deadline; polls++) {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
-        await new Promise((r) => {
-          const onVisible = () => {
-            if (document.visibilityState === 'visible') {
-              document.removeEventListener('visibilitychange', onVisible);
-              r(null);
-            }
+        await new Promise<void>((resolve) => {
+          const cleanup = () => {
+            clearTimeout(timer);
+            document.removeEventListener('visibilitychange', onVisible);
+            resolve();
           };
+          const onVisible = () => { if (document.visibilityState === 'visible') cleanup(); };
+          const timer = setTimeout(cleanup, Math.max(0, deadline - Date.now()));
           document.addEventListener('visibilitychange', onVisible);
         });
       }
-
+      if (Date.now() >= deadline) break;
+      sharedRpc.trackJourneyCall('tx_poll');
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      let outcome: Awaited<ReturnType<typeof sharedRpc.getTransactionOutcome>>;
       try {
-        sharedRpc.trackJourneyCall('tx_poll');
-        const { transaction: receipt, status, execution: execRes } = await sharedRpc.getTransactionOutcome(txHash);
-        if (receipt) {
-
-          // Blocker 2: ACCEPTED must NOT be treated as finalized. Finality requires status === FINALIZED
-          if (status === 'FINALIZED') {
-            if (execRes === 'FINISHED_WITH_RETURN') {
-              return receipt;
-            }
-
-            if (execRes === 'FINISHED_WITH_ERROR') {
-              const errMsg = formatSafeError(
-                receipt.error || receipt.data || receipt.result_data || 'Contract execution reverted on-chain'
-              );
-              throw new Error(`TRANSACTION_EXECUTION_FAILED: ${errMsg}`);
-            }
-
-            // Unknown execution result
-            throw new Error(`TRANSACTION_UNKNOWN_EXECUTION_RESULT: Execution result was '${execRes || 'MISSING'}'`);
-          }
-
-          if (status === 'CANCELED' || status === 'ERROR' || status === 'REVERTED') {
-            throw new Error(`TRANSACTION_EXECUTION_FAILED: Transaction status was ${status}`);
-          }
-          // If status is ACCEPTED, PENDING, PROPOSING, etc., continue polling!
+        outcome = await Promise.race([
+          sharedRpc.getTransactionOutcome(txHash),
+          new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('TRANSACTION_READ_TIMEOUT')),
+              Math.min(15_000, deadline - Date.now()));
+          }),
+        ]);
+      } finally { clearTimeout(timer); }
+      const { transaction: receipt, status, execution } = outcome;
+      if (receipt && status === 'FINALIZED') {
+        onFinalized?.();
+        if (execution === 'FINISHED_WITH_RETURN') return receipt;
+        if (execution === 'FINISHED_WITH_ERROR') {
+          throw new VerifiedTerminalFailure(`TRANSACTION_EXECUTION_FAILED: ${formatSafeError(receipt.error || receipt.data || receipt.result_data)}`);
         }
-      } catch (err: any) {
-        if (
-          err.message &&
-          (err.message.includes('TRANSACTION_EXECUTION_FAILED') ||
-            err.message.includes('TRANSACTION_UNKNOWN_EXECUTION_RESULT'))
-        ) {
-          throw err;
-        }
-        // Transient network error while polling: continue backoff
+        throw new Error(`TRANSACTION_UNKNOWN_EXECUTION_RESULT: Execution result was '${execution || 'MISSING'}'`);
       }
-
-      await new Promise((resolve) => setTimeout(resolve, pollInterval));
-      // Bounded backoff up to 10 seconds
-      pollInterval = Math.min(pollInterval * 1.25, 10_000);
+      // Unknown/nonfinal status cannot unlock the original operation.
+      if (polls === 23) break;
+      await new Promise((resolve) => setTimeout(resolve, Math.min(interval, Math.max(0, deadline - Date.now()))));
+      interval = Math.min(interval * 1.25, 10_000);
     }
-
     throw new Error('TRANSACTION_TIMEOUT_DEADLINE_EXCEEDED');
   }
 }

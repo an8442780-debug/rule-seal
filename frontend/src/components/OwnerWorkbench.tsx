@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { contractService } from '../services/contractService.ts';
 import { WalletState, CaseRecord, TxStep } from '../types/domain.ts';
 import { OFFICIAL_ECFR_BASE, OFFICIAL_FR_BASE, CONTRACT_ADDRESS } from '../config/chain.ts';
+import { RoleBoundaryBanner } from './RoleBoundaryBanner.tsx';
 
 interface OwnerWorkbenchProps {
   walletState: WalletState;
@@ -80,6 +81,12 @@ export const OwnerWorkbench: React.FC<OwnerWorkbenchProps> = ({
 
   return (
     <div>
+      <RoleBoundaryBanner
+        role="owner"
+        title="Case Owner & Registrar Mode"
+        description="Establish Title 14 CFR § 71.1 draft cases, configure target activity dates, and permanently freeze cases to authorize validator consensus."
+      />
+
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">Case Creator & Lifecycle Workbench</h2>
@@ -88,9 +95,18 @@ export const OwnerWorkbench: React.FC<OwnerWorkbenchProps> = ({
           </p>
         </div>
 
+        {!walletState.connected && (
+          <div className="banner banner-info" role="status">
+            <div>
+              <strong>Wallet Disconnected:</strong> Connect your wallet in the header to register new baseline cases and sign transactions.
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="banner banner-error" role="alert">
-            {error}
+            <span>⚠</span>
+            <span>{error}</span>
           </div>
         )}
 
@@ -108,7 +124,9 @@ export const OwnerWorkbench: React.FC<OwnerWorkbenchProps> = ({
 
           <div className="grid-2">
             <div className="form-group">
-              <label htmlFor="activity-date" className="form-label">Target Activity Date (2000-01-01 to 2035-12-31)</label>
+              <label htmlFor="activity-date" className="form-label">
+                Target Activity Date (2000-01-01 to 2035-12-31)
+              </label>
               <input
                 id="activity-date"
                 type="date"
@@ -123,7 +141,9 @@ export const OwnerWorkbench: React.FC<OwnerWorkbenchProps> = ({
             </div>
 
             <div className="form-group">
-              <label htmlFor="designation-hint" className="form-label">Standard Designation Family</label>
+              <label htmlFor="designation-hint" className="form-label">
+                Standard Designation Family
+              </label>
               <input
                 id="designation-hint"
                 type="text"
@@ -137,28 +157,51 @@ export const OwnerWorkbench: React.FC<OwnerWorkbenchProps> = ({
           </div>
 
           <div className="form-group">
-            <label htmlFor="client-nonce" className="form-label">Client Nonce (Idempotency Key)</label>
-            <input
-              id="client-nonce"
-              type="text"
-              className="form-input mono"
-              value={clientNonce}
-              onChange={(e) => setClientNonce(e.target.value)}
-              required
-            />
+            <label htmlFor="client-nonce" className="form-label">
+              Client Nonce (Idempotency Key)
+            </label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                id="client-nonce"
+                type="text"
+                className="form-input mono"
+                value={clientNonce}
+                onChange={(e) => setClientNonce(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setClientNonce(`nonce-${Date.now().toString(36)}`)}
+                title="Regenerate random nonce"
+              >
+                ↻ New
+              </button>
+            </div>
+            <span className="form-hint">Unique nonce ensuring exactly-once execution per client session.</span>
           </div>
 
           {/* Derived Links Preview */}
-          <div style={{ background: 'var(--bg-card-alt)', padding: '12px', borderRadius: '4px', marginBottom: '16px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-subtle)', display: 'block', marginBottom: '4px' }}>
+          <div
+            style={{
+              background: 'var(--rs-bg-card-alt)',
+              border: '1px solid var(--rs-border)',
+              padding: '14px 16px',
+              borderRadius: 'var(--radius-sm)',
+              marginBottom: '20px',
+            }}
+          >
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--rs-gold-glow)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
               Deterministic Official Source Preview:
             </span>
-            <div style={{ fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ fontSize: '12.5px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div>
-                eCFR: <code className="mono" style={{ fontSize: '11px' }}>{previewEcfrUrl}</code>
+                <span style={{ color: 'var(--rs-text-muted)', fontWeight: 600 }}>eCFR Endpoint:</span>{' '}
+                <code className="mono" style={{ fontSize: '11px', color: 'var(--rs-cyan-bright)' }}>{previewEcfrUrl}</code>
               </div>
               <div>
-                Federal Register: <code className="mono" style={{ fontSize: '11px' }}>{previewFrQueryUrl}</code>
+                <span style={{ color: 'var(--rs-text-muted)', fontWeight: 600 }}>Federal Register:</span>{' '}
+                <code className="mono" style={{ fontSize: '11px', color: 'var(--rs-cyan-bright)' }}>{previewFrQueryUrl}</code>
               </div>
             </div>
           </div>
@@ -183,7 +226,7 @@ export const OwnerWorkbench: React.FC<OwnerWorkbenchProps> = ({
             <p className="card-description">Manage state progression for the currently selected case.</p>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
             {activeCase.state === 'DRAFT' && isOwner && (
               <button
                 className="btn btn-primary"
@@ -195,7 +238,7 @@ export const OwnerWorkbench: React.FC<OwnerWorkbenchProps> = ({
             )}
 
             {activeCase.state === 'DRAFT' && !isOwner && (
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: '13px', color: 'var(--rs-text-muted)' }}>
                 Only the case owner ({activeCase.owner.slice(0, 8)}...) can freeze this draft.
               </p>
             )}

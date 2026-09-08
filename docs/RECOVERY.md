@@ -1,90 +1,45 @@
-# Failure Modes & Disaster Recovery Procedures
+# RuleSeal recovery
 
-This guide provides operational runbooks and disaster recovery protocols for the **Regulatory Edition Applicability Lock** intelligent contract and client applications.
+These procedures describe safety boundaries, not verified live RuleSeal recovery.
 
----
+## Pending transaction
 
-## 1. RPC Infrastructure & Network Failures
+Keep the hash and browser journal. Reconcile the same operation; never resubmit because a modal is slow, a tab reloaded or an RPC timed out. FINALIZED alone may include failed execution.
 
-### Symptom: HTTP 429 (Rate Limit) or 5xx (Server Error)
-- **Automatic Mitigation**: The shared `RpcClient` employs an exponential backoff retry loop with randomized jitter:
-  $$\text{delay} = \min(1000 \times 2^{\text{attempt}} + \text{jitter}, 10000)\text{ ms}$$
-  Retries up to 3 times before raising a user-visible error.
-- **Recovery Procedure**:
-  1. Verify the health of the Studionet RPC endpoint (`https://studio.genlayer.com/api`).
-  2. Keep the canonical Studionet endpoint. Surface the outage, preserve validated state, and retry only through the bounded client policy; do not silently switch authority endpoints.
+Success requires finality, successful execution and expected authoritative readback. Unknown results/readback failures retain pending records. Do not clear browser storage to unlock a write. Journals are origin/profile-local, not canonical state.
 
----
+The transaction dialog distinguishes wallet confirmation, submission, finality, execution verification and readback. Only the completed sequence reports success. Code 4001 is wallet rejection; an unknown wallet error or invalid hash remains reconciliation-required, including before a hash is known.
 
-## 2. Transaction Interruptions & Client Reloads
+Recovery storage is scoped to the configured chain and contract. Account-specific readback uses the sender captured with the submitted operation, not whichever account is connected later. Malformed/unavailable storage blocks new writes without deleting it. A pre-hash record remains locked after reload: inspect wallet transaction activity before deciding whether anything was submitted; the application cannot infer non-submission from a missing hash.
 
-### Symptom: User Closes Browser or Reloads Mid-Transaction
-- **Architecture**: The application implements a **Restart-Safe Pending Journal** in `localStorage`/`sessionStorage`.
-  1. Before triggering wallet signatures, a `PRE_SIGN` intent record is persisted.
-  2. Once broadcast to Studionet, the record status is updated to `SUBMITTED` with the assigned transaction hash.
-  3. Once finality and readback are confirmed, the record is removed.
-- **Recovery Procedure**:
-  1. Upon application launch, the `App` component detects any unfinalized journal entries.
-  2. The recovery control reconciles the retained hash against transaction finality, execution result, and the operation-specific authoritative contract readback.
-  3. The operation remains locked while the result is pending or ambiguous. It is cleared only after verified effect or confirmed terminal failure; the client never asks the user to delete an unreconciled hash.
+If persistence fails after submission, keep the page open and copy the displayed hash. The volatile journal protects the current page, but cannot guarantee recovery after closing it. Do not claim cross-tab atomicity from localStorage. Finalized success does not clear the record until its method-specific expected identity and state agree; failed cleanup remains locked.
 
----
+Foreground polling stops after at most 24 reads or five minutes. A hidden page makes no further polls and ends at its deadline. An unavailable read stops verification rather than silently submitting another write. Physical-network budgets, cancellation of underlying SDK requests and full reload-budget enforcement still require completion and measurement before release.
 
-## 3. Upstream Regulatory Data Outages (eCFR / Federal Register)
+## RPC and source failures
 
-### Symptom: Government API Downtime (eCFR Versioner or Federal Register API)
-- **Intelligent Contract Invariant**: If external HTTP endpoints fail (e.g., HTTP 503, connection timeouts), the validator evaluation returns an `UNRESOLVED` assessment with reason code `UPSTREAM_SOURCE_UNAVAILABLE`.
-- **State Transition**: Case state transitions to `UNRESOLVED`.
-- **Recovery Procedure**:
-  1. Contract enforces a **3600-second (1 hour) cooldown** between retry attempts to prevent spamming failing upstream sources.
-  2. Any user may invoke `retry_unresolved(case_id)` once the cooldown period expires.
-  3. A case allows up to **3 total assessment attempts**.
-  4. If all 3 attempts fail due to prolonged governmental downtime, the owner may propose a new case draft once upstream services recover.
+Distinguish frontend RPC errors from government-source failures in assessment. Preserve the error, request count and fault domain. Use bounded retries; no request storms or silent endpoint changes. Studio and frontend budgets are separate and require measured compliance.
 
----
+An agreed unavailable-source assessment may leave UNRESOLVED. After 3600 seconds from the last attempt, retry_unresolved reserves FROZEN; a separate assess_case performs the next assessment. The cap is three total assessments.
 
-## 4. Conflicting or Tampered Regulatory Data
+At the cap, a new nonce cannot bypass identical-input fingerprint protection. An UNRESOLVED predecessor cannot create a successor. Preserve evidence and report the limitation; do not bypass guards or automatically redeploy.
 
-### Symptom: External Data Divergence or Prompt Injection Attempts
-- **Intelligent Contract Invariant**: GenLayer validators execute independent web requests and model evaluations.
-- **Consensus Enforcement**: The `validate` closure strictly enforces substantive equality across all consequential fields (`edition`, `effective_from`, `effective_to`, sorted `authority_documents`).
-- **Disagreement Handling**:
-  - If a malicious actor attempts prompt injection or returns conflicting edition designations, validator responses will not match.
-  - The consensus engine will reject the candidate, marking the evaluation as `UNRESOLVED`.
+Consensus rejection is not a stored UNRESOLVED outcome. Read actual state before choosing the eligible action.
 
----
+## Successor and integration
 
-## 5. Successor Migration & Predecessor Lineage
+1. Owner selects a LOCKED or NOT_APPLICABLE predecessor with no successor.
+2. Create a successor for a different activity date and fresh caller nonce.
+3. Read reciprocal lineage and successor DRAFT; predecessor is not superseded yet.
+4. Owner freezes; resolver assesses.
+5. Only successor LOCKED or NOT_APPLICABLE supersedes predecessor; UNRESOLVED leaves it unchanged.
+6. Integrator explicitly advances its namespace only to the declared LOCKED successor.
+7. Read case_id and previous_case_id. A still-LOCKED same-case rebind is a no-op; NOT_APPLICABLE is not bindable.
 
-### Scenario: FAA Issues New Annual Standard Edition (e.g., JO 7400.11K supersedes 7400.11J)
-- **Procedure**:
-  1. Locate the existing terminal case (`LOCKED` or `NOT_APPLICABLE`) in Public Lookup.
-  2. Navigate to the **Successor Lineage Proposal Wizard**.
-  3. Enter the new target activity date and client nonce.
-  4. Execute `create_successor(old_case_id, nonce, new_activity_date)`.
-  5. Predecessor case is permanently marked `SUPERSEDED_BY_SUCCESSOR` with `successor_case_id` linked.
-  6. The new case draft is created with `predecessor_case_id` linked.
-  7. Downstream checklist integrators can invoke `activate_integration` with the new case ID to atomically advance their namespace binding.
+## Upgrade and authority loss
 
----
+Root Slot authorization does not prove storage compatibility. Review exact replacement source/layout and rehearse on the designated disposable instance with meaningful case, lineage and integration state. Verify authorization, source parity and before/after readbacks.
 
-## 6. Root Slot Contract Upgrader Migration
+RuleSeal is independent and migrates no old state. Never modify the original project's deployment/release.
 
-### Scenario: Deploying Contract Upgrades or Security Patches
-- **Architecture**: In accordance with the GenLayer Intelligent Contract SDK, contract deployment initializes the upgrader slot:
-  ```python
-  root = gl.storage.Root.get()
-  root.upgraders.get().append(gl.message.sender_address)
-  ```
-- **Governance Invariant**:
-  Only addresses present in `root.upgraders` are authorized to deploy upgraded contract code.
-- **Recovery Procedure**:
-  1. The recorded Studio deployer/upgrader account submits the exact reviewed replacement source bytes through the verified contract upgrade method.
-  2. The Root slot preserves all existing storage (`cases`, `assessments`, `integrations`, `events`).
-  3. Upgraded contract logic is bound without data loss or state corruption.
-
-### Authority-loss limits
-
-- If Studio local data resets but the recorded account and Studionet state remain accessible, import the contract by address, verify the upgrader readback, and use the exact recorded source.
-- If the recorded Studio account becomes unavailable, the existing contract may remain readable but its upgrade authority is not recoverable. Deploy a reviewed replacement and rerun all live tests and wiring.
-- If Studionet state resets, the prior address/state cannot be recovered. Redeploy from the exact manifest and rerun the complete live matrix.
+Lost upgrader access has no demonstrated bypass. A Studionet reset cannot be repaired from browser metadata. Any replacement requires its own review, deployment, wiring and new evidence, not an automatic retry.

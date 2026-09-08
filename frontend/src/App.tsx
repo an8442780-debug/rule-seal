@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header.tsx';
 import { DeploymentBanner } from './components/DeploymentBanner.tsx';
+import { RegulatoryLandingIntro } from './components/RegulatoryLandingIntro.tsx';
 import { WalletModal } from './components/WalletModal.tsx';
 import { PublicLookup } from './components/PublicLookup.tsx';
 import { OwnerWorkbench } from './components/OwnerWorkbench.tsx';
@@ -16,6 +17,21 @@ import { WalletState, CaseRecord, TxStep, PendingOperation, EIP6963ProviderDetai
 
 type ActiveTab = 'lookup' | 'creator' | 'resolver' | 'integrator' | 'successor' | 'auditor';
 
+interface TabItem {
+  id: ActiveTab;
+  label: string;
+  roleTag: string;
+}
+
+const TABS: TabItem[] = [
+  { id: 'lookup', label: 'Public Evidence Lookup', roleTag: 'Public' },
+  { id: 'creator', label: 'Case Creator & Lifecycle', roleTag: 'Owner' },
+  { id: 'resolver', label: 'Resolver Consensus', roleTag: 'Resolver' },
+  { id: 'integrator', label: 'Checklist Integrator', roleTag: 'Integrator' },
+  { id: 'successor', label: 'Successor Wizard', roleTag: 'Owner' },
+  { id: 'auditor', label: 'Auditor Hub', roleTag: 'Auditor' },
+];
+
 export const App: React.FC = () => {
   const [walletState, setWalletState] = useState<WalletState>(walletService.getState());
   const [discoveredProviders, setDiscoveredProviders] = useState<EIP6963ProviderDetail[]>([]);
@@ -24,6 +40,9 @@ export const App: React.FC = () => {
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [activeCase, setActiveCase] = useState<CaseRecord | null>(null);
 
+  // Ref array for tab buttons to manage roving focus
+  const tabButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
   // Transaction Progress Modal state
   const [txStep, setTxStep] = useState<TxStep>('IDLE');
   const [txDetail, setTxDetail] = useState<any>(null);
@@ -31,19 +50,25 @@ export const App: React.FC = () => {
 
   // Unfinished recovery journal alert
   const [pendingOps, setPendingOps] = useState<PendingOperation[]>([]);
+  const [reconciling, setReconciling] = useState(false);
+  const [recoveryError, setRecoveryError] = useState('');
 
   useEffect(() => {
     const unsub = walletService.subscribe((state) => {
       setWalletState(state);
+      // EIP-6963 announcements can arrive after the chooser opens; keep the
+      // visible provider list synchronized with the page-level registry.
+      setDiscoveredProviders(walletService.getDiscoveredProviders());
     });
 
     const cleanupEip6963 = walletService.initEIP6963();
     setDiscoveredProviders(walletService.getDiscoveredProviders());
 
     // Check for pending unfinalized operations in journal
-    const pending = journalService.getPendingOperations();
-    if (pending.length > 0) {
-      setPendingOps(pending);
+    try {
+      setPendingOps(journalService.getPendingOperations());
+    } catch {
+      setRecoveryError('Recovery storage is unavailable or unreadable. Restore browser storage access before another write. Existing recovery data has not been deleted.');
     }
 
     return () => {
@@ -85,14 +110,41 @@ export const App: React.FC = () => {
     setIsTxModalOpen(false);
     setTxStep('IDLE');
     setTxDetail(null);
+    try { setPendingOps(journalService.getPendingOperations()); }
+    catch { setRecoveryError('Recovery storage is unavailable. Do not submit again until the existing operation is verified.'); }
     handleRefreshActiveCase();
+  };
+
+  // Keyboard navigation for WAI-ARIA tabs (ArrowLeft, ArrowRight, Home, End)
+  const handleTabKeyDown = (e: React.KeyboardEvent, currentIndex: number) => {
+    let nextIndex: number | null = null;
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      nextIndex = (currentIndex + 1) % TABS.length;
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      nextIndex = (currentIndex - 1 + TABS.length) % TABS.length;
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      nextIndex = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      nextIndex = TABS.length - 1;
+    }
+
+    if (nextIndex !== null) {
+      const nextTab = TABS[nextIndex];
+      setActiveTab(nextTab.id);
+      tabButtonRefs.current[nextIndex]?.focus();
+    }
   };
 
   return (
     <div
       className="app-container"
-      inert={isWalletModalOpen ? true : undefined}
-      aria-hidden={isWalletModalOpen ? 'true' : undefined}
+      inert={isWalletModalOpen || isTxModalOpen ? true : undefined}
+      aria-hidden={isWalletModalOpen || isTxModalOpen ? 'true' : undefined}
     >
       <Header
         walletState={walletState}
@@ -101,147 +153,156 @@ export const App: React.FC = () => {
         onSwitchChain={() => walletService.switchChain()}
       />
 
-      <main style={{ paddingBottom: '40px' }}>
+      <main style={{ paddingBottom: '40px' }} role="main">
         <DeploymentBanner />
 
+        {/* 4-Pillar Regulatory Dossier Intro Briefing */}
+        <RegulatoryLandingIntro />
+
         {/* Journal Recovery Notice */}
-        {pendingOps.length > 0 && (
-          <div className="banner banner-warning" style={{ marginBottom: '16px' }}>
-            <div style={{ fontWeight: 700, marginBottom: '4px' }}>
-              Pending Operation Recovery Notice
+        {(pendingOps.length > 0 || recoveryError) && (
+          <div className="banner banner-warning" role="alert" style={{ marginBottom: '20px' }}>
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>⚠</span>
+                <span>Pending Operation Recovery Notice</span>
+              </div>
+              <p style={{ fontSize: '13px', margin: 0 }}>
+                {recoveryError || <>
+                Found {pendingOps.length} pending operation(s) recorded in your local recovery journal prior to session reload.
+                Operations must be reconciled against the Studionet RPC to confirm finality before re-attempting.
+                </>}
+              </p>
             </div>
-            <p style={{ fontSize: '13px', margin: 0 }}>
-              Found {pendingOps.length} pending operation(s) recorded in your local journal prior to session reload.
-              Operations must be reconciled against the Studionet RPC to confirm finality before re-attempting.
-            </p>
-            <div style={{ marginTop: '8px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
               <button
                 className="btn btn-secondary btn-sm"
+                disabled={reconciling}
                 onClick={async () => {
-                  const result = await journalService.reconcilePendingOperations(
-                    undefined,
-                    (operation) => contractService.verifyPendingOperation(operation)
-                  );
-                  setPendingOps(result.reconciled);
-                  if (result.finalized.length > 0) {
-                    handleRefreshActiveCase();
+                  setReconciling(true);
+                  try {
+                    const result = await journalService.reconcilePendingOperations(
+                      undefined,
+                      (operation) => contractService.verifyPendingOperation(operation)
+                    );
+                    setPendingOps(result.reconciled);
+                    setRecoveryError('');
+                    if (result.finalized.length > 0) {
+                      handleRefreshActiveCase();
+                    }
+                  } catch {
+                    setRecoveryError('Verification could not finish. Keep the existing operation and restore storage or network access before checking again. Do not resubmit.');
+                  } finally {
+                    setReconciling(false);
                   }
                 }}
               >
-                Reconcile with Chain
+                {reconciling ? 'Reconciling...' : 'Reconcile with Chain'}
               </button>
             </div>
           </div>
         )}
 
-        {/* Primary Tab Navigation */}
-        <div className="tabs" role="tablist">
-          <button
-            role="tab"
-            aria-selected={activeTab === 'lookup'}
-            className={`tab-button ${activeTab === 'lookup' ? 'active' : ''}`}
-            onClick={() => setActiveTab('lookup')}
-          >
-            Public Evidence Lookup
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === 'creator'}
-            className={`tab-button ${activeTab === 'creator' ? 'active' : ''}`}
-            onClick={() => setActiveTab('creator')}
-          >
-            Case Creator & Lifecycle
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === 'resolver'}
-            className={`tab-button ${activeTab === 'resolver' ? 'active' : ''}`}
-            onClick={() => setActiveTab('resolver')}
-          >
-            Resolver Consensus
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === 'integrator'}
-            className={`tab-button ${activeTab === 'integrator' ? 'active' : ''}`}
-            onClick={() => setActiveTab('integrator')}
-          >
-            Checklist Integrator
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === 'successor'}
-            className={`tab-button ${activeTab === 'successor' ? 'active' : ''}`}
-            onClick={() => setActiveTab('successor')}
-          >
-            Successor Wizard
-          </button>
-          <button
-            role="tab"
-            aria-selected={activeTab === 'auditor'}
-            className={`tab-button ${activeTab === 'auditor' ? 'active' : ''}`}
-            onClick={() => setActiveTab('auditor')}
-          >
-            Auditor Hub
-          </button>
-        </div>
+        {/* Primary WAI-ARIA Tab Navigation */}
+        <nav className="tabs" role="tablist" aria-label="RuleSeal Workflows">
+          {TABS.map((tab, idx) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                ref={(el) => {
+                  tabButtonRefs.current[idx] = el;
+                }}
+                role="tab"
+                id={`tab-${tab.id}`}
+                aria-controls={`panel-${tab.id}`}
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                className={`tab-button ${isActive ? 'active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+                onKeyDown={(e) => handleTabKeyDown(e, idx)}
+              >
+                <span>{tab.label}</span>
+                <span className="tab-role-tag">{tab.roleTag}</span>
+              </button>
+            );
+          })}
+        </nav>
 
-        {/* Tab Content Panels */}
-        {activeTab === 'lookup' && (
-          <PublicLookup selectedCaseId={selectedCaseId} onSelectCase={handleSelectCase} />
-        )}
-
-        {activeTab === 'creator' && (
-          <OwnerWorkbench
-            walletState={walletState}
-            activeCase={activeCase}
-            onTxStart={handleTxStart}
-            onCaseCreated={(newId) => {
-              handleSelectCase(newId);
-              setActiveTab('lookup');
-            }}
-            onRefreshActiveCase={handleRefreshActiveCase}
-          />
-        )}
-
-        {activeTab === 'resolver' && (
-          <ResolverWorkbench
-            walletState={walletState}
-            activeCase={activeCase}
-            onTxStart={handleTxStart}
-            onRefreshActiveCase={handleRefreshActiveCase}
-          />
-        )}
-
-        {activeTab === 'integrator' && (
-          <IntegratorWorkbench
-            walletState={walletState}
-            activeCase={activeCase}
-            onTxStart={handleTxStart}
-          />
-        )}
-
-        {activeTab === 'successor' && (
-          activeCase ? (
-            <SuccessorWizard
-              walletState={walletState}
-              predecessorCase={activeCase}
-              onTxStart={handleTxStart}
-              onSuccessorCreated={(newId) => {
-                handleSelectCase(newId);
-                setActiveTab('lookup');
-              }}
-            />
-          ) : (
-            <div className="card">
-              <div className="banner banner-info">
-                Please select or lookup a terminal case (<code>LOCKED</code> or <code>NOT_APPLICABLE</code>) in Public Lookup to propose a successor.
-              </div>
+        {/* Tab Content Panels with synchronized role="tabpanel" */}
+        <div id="tab-panels-region">
+          {activeTab === 'lookup' && (
+            <div id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup" tabIndex={0}>
+              <PublicLookup selectedCaseId={selectedCaseId} onSelectCase={handleSelectCase} />
             </div>
-          )
-        )}
+          )}
 
-        {activeTab === 'auditor' && <AuditorView />}
+          {activeTab === 'creator' && (
+            <div id="panel-creator" role="tabpanel" aria-labelledby="tab-creator" tabIndex={0}>
+              <OwnerWorkbench
+                walletState={walletState}
+                activeCase={activeCase}
+                onTxStart={handleTxStart}
+                onCaseCreated={(newId) => {
+                  handleSelectCase(newId);
+                  setActiveTab('lookup');
+                  tabButtonRefs.current[0]?.focus();
+                }}
+                onRefreshActiveCase={handleRefreshActiveCase}
+              />
+            </div>
+          )}
+
+          {activeTab === 'resolver' && (
+            <div id="panel-resolver" role="tabpanel" aria-labelledby="tab-resolver" tabIndex={0}>
+              <ResolverWorkbench
+                walletState={walletState}
+                activeCase={activeCase}
+                onTxStart={handleTxStart}
+                onRefreshActiveCase={handleRefreshActiveCase}
+              />
+            </div>
+          )}
+
+          {activeTab === 'integrator' && (
+            <div id="panel-integrator" role="tabpanel" aria-labelledby="tab-integrator" tabIndex={0}>
+              <IntegratorWorkbench
+                walletState={walletState}
+                activeCase={activeCase}
+                onTxStart={handleTxStart}
+              />
+            </div>
+          )}
+
+          {activeTab === 'successor' && (
+            <div id="panel-successor" role="tabpanel" aria-labelledby="tab-successor" tabIndex={0}>
+              {activeCase ? (
+                <SuccessorWizard
+                  walletState={walletState}
+                  predecessorCase={activeCase}
+                  onTxStart={handleTxStart}
+                  onSuccessorCreated={(newId) => {
+                    handleSelectCase(newId);
+                    setActiveTab('lookup');
+                    tabButtonRefs.current[0]?.focus();
+                  }}
+                />
+              ) : (
+                <div className="card">
+                  <div className="banner banner-info">
+                    Please select or lookup a terminal case (<code>LOCKED</code> or <code>NOT_APPLICABLE</code>) in Public Lookup to propose a successor.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'auditor' && (
+            <div id="panel-auditor" role="tabpanel" aria-labelledby="tab-auditor" tabIndex={0}>
+              <AuditorView />
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Modals */}

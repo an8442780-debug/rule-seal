@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { contractService } from '../services/contractService.ts';
 import { EventRecord } from '../types/domain.ts';
 import { CONTRACT_ADDRESS } from '../config/chain.ts';
+import { RoleBoundaryBanner } from './RoleBoundaryBanner.tsx';
 
 export const AuditorView: React.FC = () => {
   const [events, setEvents] = useState<EventRecord[]>([]);
@@ -50,6 +51,12 @@ export const AuditorView: React.FC = () => {
 
   return (
     <div>
+      <RoleBoundaryBanner
+        role="auditor"
+        title="Auditor & Regulatory Observer Mode"
+        description="Inspect the append-only cryptographic event log, monitor system health metrics, and audit incorporation locks across all cases."
+      />
+
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">Auditor & Regulatory Observer Hub</h2>
@@ -60,44 +67,83 @@ export const AuditorView: React.FC = () => {
 
         {error && (
           <div className="banner banner-error" role="alert">
-            {error}
+            <span>⚠</span>
+            <span>{error}</span>
           </div>
         )}
 
         {/* System Health / Summary Metrics */}
         <div className="grid-3" style={{ marginBottom: '24px' }}>
-          <div style={{ background: 'var(--bg-card-alt)', padding: '16px', borderRadius: '4px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+          <div
+            style={{
+              background: 'var(--rs-bg-card-alt)',
+              border: '1px solid var(--rs-border)',
+              padding: '18px',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <span style={{ fontSize: '11px', color: 'var(--rs-text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>
               Total Cases Tracked
             </span>
-            <div style={{ fontSize: '28px', fontWeight: 800, marginTop: '4px' }}>{totalCases}</div>
+            <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--rs-text-heading)', marginTop: '4px', letterSpacing: '-0.02em' }}>
+              {totalCases}
+            </div>
           </div>
 
-          <div style={{ background: 'var(--bg-card-alt)', padding: '16px', borderRadius: '4px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+          <div
+            style={{
+              background: 'var(--rs-bg-card-alt)',
+              border: '1px solid var(--rs-border)',
+              padding: '18px',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <span style={{ fontSize: '11px', color: 'var(--rs-text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>
               Bound Integrations
             </span>
-            <div style={{ fontSize: '28px', fontWeight: 800, marginTop: '4px' }}>{totalIntegrations}</div>
+            <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--rs-cyan-bright)', marginTop: '4px', letterSpacing: '-0.02em' }}>
+              {totalIntegrations}
+            </div>
           </div>
 
-          <div style={{ background: 'var(--bg-card-alt)', padding: '16px', borderRadius: '4px' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+          <div
+            style={{
+              background: 'var(--rs-bg-card-alt)',
+              border: '1px solid var(--rs-border)',
+              padding: '18px',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            <span style={{ fontSize: '11px', color: 'var(--rs-text-muted)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.04em' }}>
               Append-Only Events
             </span>
-            <div style={{ fontSize: '28px', fontWeight: 800, marginTop: '4px' }}>{totalEvents}</div>
+            <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--rs-gold-glow)', marginTop: '4px', letterSpacing: '-0.02em' }}>
+              {totalEvents}
+            </div>
           </div>
         </div>
 
         {/* Filter Controls */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <label htmlFor="filter-topic" style={{ fontSize: '13px', fontWeight: 600 }}>Filter Topic:</label>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '16px',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <label htmlFor="filter-topic" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--rs-text-heading)' }}>
+              Filter Topic:
+            </label>
             <select
               id="filter-topic"
               className="form-input"
               value={filterTopic}
               onChange={(e) => setFilterTopic(e.target.value)}
-              style={{ width: 'auto' }}
+              style={{ width: 'auto', minWidth: '200px' }}
             >
               <option value="ALL">All Event Topics</option>
               <option value="CASE_CREATED">CASE_CREATED</option>
@@ -113,6 +159,7 @@ export const AuditorView: React.FC = () => {
             className="btn btn-secondary btn-sm"
             onClick={loadStatsAndEvents}
             disabled={loading || !CONTRACT_ADDRESS}
+            aria-label="Refresh audit logs from chain"
           >
             {loading ? 'Refreshing...' : 'Refresh Logs'}
           </button>
@@ -120,11 +167,11 @@ export const AuditorView: React.FC = () => {
 
         {/* Events Table */}
         <div className="table-responsive">
-          <table className="table">
+          <table className="table" aria-label="Append-Only Audit Events">
             <thead>
               <tr>
-                <th style={{ width: '120px' }}>Event ID</th>
-                <th style={{ width: '180px' }}>Event Type</th>
+                <th style={{ width: '130px' }}>Event ID</th>
+                <th style={{ width: '200px' }}>Event Type</th>
                 <th style={{ width: '160px' }}>Subject ID</th>
                 <th style={{ width: '220px' }}>Timestamp (UTC)</th>
                 <th>Actor</th>
@@ -133,22 +180,22 @@ export const AuditorView: React.FC = () => {
             <tbody>
               {filteredEvents.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px' }}>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--rs-text-muted)', padding: '28px' }}>
                     {loading ? 'Loading events...' : 'No audit events recorded yet.'}
                   </td>
                 </tr>
               ) : (
                 filteredEvents.map((evt, idx) => (
                   <tr key={evt.event_id || idx}>
-                    <td className="mono" style={{ fontWeight: 700 }}>{evt.event_id}</td>
+                    <td className="mono" style={{ fontWeight: 700, color: 'var(--rs-text-heading)' }}>{evt.event_id}</td>
                     <td>
                       <span className={`badge badge-${evt.event_type.includes('CREATED') || evt.event_type.includes('ACTIVATED') ? 'LOCKED' : evt.event_type.includes('FROZEN') ? 'FROZEN' : 'NOT_APPLICABLE'}`}>
                         {evt.event_type}
                       </span>
                     </td>
-                    <td className="mono">{evt.subject_id}</td>
+                    <td className="mono" style={{ color: 'var(--rs-cyan-bright)' }}>{evt.subject_id}</td>
                     <td className="mono" style={{ fontSize: '12px' }}>{evt.timestamp}</td>
-                    <td className="mono" style={{ fontSize: '11px' }}>{evt.actor}</td>
+                    <td className="mono" style={{ fontSize: '11px', color: 'var(--rs-text-muted)' }}>{evt.actor}</td>
                   </tr>
                 ))
               )}
@@ -158,21 +205,23 @@ export const AuditorView: React.FC = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px' }}>
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0 || loading}
+              aria-label="Go to previous page of audit events"
             >
               Previous Page
             </button>
-            <span style={{ fontSize: '13px', alignSelf: 'center' }}>
+            <span style={{ fontSize: '13px', alignSelf: 'center', color: 'var(--rs-text-muted)' }}>
               Page {page + 1} of {totalPages}
             </span>
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={page >= totalPages - 1 || loading}
+              aria-label="Go to next page of audit events"
             >
               Next Page
             </button>

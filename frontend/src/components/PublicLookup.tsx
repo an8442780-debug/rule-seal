@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { contractService } from '../services/contractService.ts';
 import { CaseRecord, AssessmentRecord } from '../types/domain.ts';
 import { CaseDetailView } from './CaseDetailView.tsx';
+import { RoleBoundaryBanner } from './RoleBoundaryBanner.tsx';
 import { CONTRACT_ADDRESS } from '../config/chain.ts';
 
 interface PublicLookupProps {
@@ -79,6 +80,12 @@ export const PublicLookup: React.FC<PublicLookupProps> = ({ selectedCaseId, onSe
 
   return (
     <div>
+      <RoleBoundaryBanner
+        role="public"
+        title="Public Reader Mode"
+        description="Explore locked baselines, authority documents, and official eCFR/Federal Register evidence without wallet connection."
+      />
+
       <div className="card">
         <div className="card-header">
           <h2 className="card-title">Public Regulatory Evidence Lookup</h2>
@@ -87,32 +94,45 @@ export const PublicLookup: React.FC<PublicLookupProps> = ({ selectedCaseId, onSe
           </p>
         </div>
 
-        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          <input
-            type="text"
-            className="form-input mono"
-            placeholder="Enter Case ID (e.g. REAL-000001)"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            disabled={!CONTRACT_ADDRESS}
-          />
-          <button type="submit" className="btn btn-primary" disabled={loading || !CONTRACT_ADDRESS}>
+        <form onSubmit={handleSearch} style={{ display: 'flex', gap: '10px', marginBottom: '18px', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 280px' }}>
+            <label htmlFor="case-search-input" className="sr-only" style={{ display: 'none' }}>
+              Case ID
+            </label>
+            <input
+              id="case-search-input"
+              type="text"
+              className="form-input mono"
+              placeholder="Enter Case ID (e.g. REAL-000001)"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              disabled={!CONTRACT_ADDRESS}
+              aria-label="Enter Case ID"
+            />
+          </div>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={loading || !CONTRACT_ADDRESS}
+            style={{ flexShrink: 0 }}
+          >
             {loading ? 'Searching...' : 'Lookup'}
           </button>
         </form>
 
         {error && (
           <div className="banner banner-error" role="alert">
-            {error}
+            <span>⚠</span>
+            <span>{error}</span>
           </div>
         )}
 
         {recentCaseIds.length > 0 && (
-          <div>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)' }}>
-              Recent Cases ({totalCount} total):{' '}
+          <div style={{ marginTop: '12px' }}>
+            <span style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--rs-text-muted)', display: 'block', marginBottom: '6px' }}>
+              On-Chain Docket Index ({totalCount} total cases):
             </span>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '6px' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {recentCaseIds.map((id) => (
                 <button
                   key={id}
@@ -121,11 +141,30 @@ export const PublicLookup: React.FC<PublicLookupProps> = ({ selectedCaseId, onSe
                     onSelectCase(id);
                     loadCaseDetails(id);
                   }}
+                  aria-label={`Inspect case ${id}`}
                 >
                   {id}
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {!currentCase && !loading && !error && (
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '16px',
+              background: 'var(--rs-bg-card-alt)',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px dashed var(--rs-border-light)',
+              fontSize: '13px',
+              color: 'var(--rs-text-muted)',
+            }}
+          >
+            <p style={{ margin: 0 }}>
+              💡 Enter an exact Case ID above or click any docket index item to view its frozen parameters, official XML endpoints, and validator consensus assessment.
+            </p>
           </div>
         )}
       </div>

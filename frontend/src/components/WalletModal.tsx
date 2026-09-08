@@ -19,45 +19,63 @@ export const WalletModal: React.FC<WalletModalProps> = ({
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
 
   useEffect(() => {
-    if (isOpen) {
-      previouslyFocusedRef.current = document.activeElement as HTMLElement;
-      setTimeout(() => {
-        (firstButtonRef.current || closeButtonRef.current)?.focus();
-      }, 0);
+    onCloseRef.current = onClose;
+  });
 
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          onClose();
-        } else if (e.key === 'Tab') {
-          const controls = Array.from(
-            dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])') || []
-          );
-          if (controls.length === 0) return;
-          const first = controls[0];
-          const last = controls[controls.length - 1];
-          if (e.shiftKey && document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          } else if (!e.shiftKey && document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // Capture the trigger element that held focus prior to opening
+    const triggerElement = (document.activeElement as HTMLElement) || null;
+    previouslyFocusedRef.current = triggerElement;
+
+    // Delay initial focus to permit DOM mount, capturing timer id for cancellation
+    const timerId = window.setTimeout(() => {
+      (firstButtonRef.current || closeButtonRef.current)?.focus();
+    }, 0);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onCloseRef.current();
+      } else if (e.key === 'Tab') {
+        const controls = Array.from(
+          dialogRef.current?.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          ) || []
+        );
+        if (controls.length === 0) {
+          e.preventDefault();
+          return;
         }
-      };
-      window.addEventListener('keydown', handleKeyDown);
-      return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-      };
-    } else {
-      previouslyFocusedRef.current?.focus();
-    }
-  }, [isOpen, onClose]);
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.clearTimeout(timerId);
+      window.removeEventListener('keydown', handleKeyDown);
+      // Restore focus to original trigger element upon close or unmount
+      triggerElement?.focus();
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  return createPortal((
+  return createPortal(
     <div
       className="modal-overlay"
       onClick={(e) => {
@@ -74,9 +92,12 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         aria-labelledby="wallet-modal-title"
       >
         <div className="modal-header">
-          <h2 id="wallet-modal-title" className="modal-title">
-            Select Wallet
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px' }} aria-hidden="true">🔑</span>
+            <h2 id="wallet-modal-title" className="modal-title">
+              Select Wallet
+            </h2>
+          </div>
           <button
             ref={closeButtonRef}
             className="btn btn-secondary btn-sm"
@@ -87,14 +108,16 @@ export const WalletModal: React.FC<WalletModalProps> = ({
           </button>
         </div>
 
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-          Connect via an EIP-6963 provider. Supported: MetaMask, OKX Wallet, Rabby.
+        <p style={{ fontSize: '13px', color: 'var(--rs-text-muted)', marginBottom: '18px', lineHeight: 1.5 }}>
+          Connect via an EIP-6963 multi-injected provider to sign transactions on GenLayer Studionet. Supported wallets include MetaMask, OKX Wallet, and Rabby.
         </p>
 
         <div>
           {providers.length === 0 ? (
             <div className="banner banner-info" style={{ marginTop: '8px' }}>
-              No supported wallet detected. Please install MetaMask, OKX Wallet, or Rabby.
+              <div>
+                <strong>No supported wallet detected.</strong> Please install MetaMask, OKX Wallet, or Rabby extension in your browser to interact with on-chain cases.
+              </div>
             </div>
           ) : (
             providers.map((p, index) => (
@@ -106,32 +129,55 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                   onSelectProvider(p);
                   onClose();
                 }}
+                aria-label={`Connect with ${p.info.name}`}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                   {p.info.icon ? (
                     <img
                       src={p.info.icon}
                       alt=""
-                      style={{ width: '24px', height: '24px', borderRadius: '4px' }}
+                      aria-hidden="true"
+                      style={{ width: '28px', height: '28px', borderRadius: '6px', flexShrink: 0 }}
                     />
                   ) : (
                     <div
+                      aria-hidden="true"
                       style={{
-                        width: '24px',
-                        height: '24px',
-                        backgroundColor: 'var(--border-color)',
-                        borderRadius: '4px',
+                        width: '28px',
+                        height: '28px',
+                        backgroundColor: 'var(--rs-border)',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: 'var(--rs-text-muted)',
                       }}
-                    />
+                    >
+                      {p.info.name.slice(0, 1)}
+                    </div>
                   )}
-                  <span style={{ fontWeight: 600, fontSize: '14px' }}>{p.info.name}</span>
+                  <div>
+                    <span style={{ fontWeight: 700, fontSize: '14.5px', color: 'var(--rs-text-heading)', display: 'block' }}>
+                      {p.info.name}
+                    </span>
+                    {p.info.rdns && (
+                      <span className="mono" style={{ fontSize: '11px', color: 'var(--rs-text-subtle)' }}>
+                        {p.info.rdns}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <span style={{ fontSize: '12px', color: 'var(--text-subtle)' }}>Connect →</span>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--rs-cyan-bright)' }}>
+                  Connect →
+                </span>
               </button>
             ))
           )}
         </div>
       </div>
-    </div>
-  ), document.body);
+    </div>,
+    document.body
+  );
 };

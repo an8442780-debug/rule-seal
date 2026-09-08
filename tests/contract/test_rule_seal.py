@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 
-CONTRACT_FILE = "contracts/regulatory_edition_applicability_lock.py"
+CONTRACT_FILE = "contracts/rule_seal.py"
 FIXTURES_DIR = Path(__file__).parents[1] / "fixtures"
 
 ECFR_2025_XML = (FIXTURES_DIR / "official_ecfr_2025_09_15_title14_section71_1.xml").read_text(encoding="utf-8")
@@ -398,7 +398,27 @@ def test_validator_substantive_disagreement_and_injection(direct_deploy, direct_
     assert direct_vm.run_validator() is False
 
 
-def test_successor_creation_and_lifecycle(direct_deploy, direct_vm, direct_alice, direct_bob):
+def lifecycle_snapshot(contract):
+    """Compare public records byte-for-byte, including events and timestamps."""
+    case_ids = [contract.get_case_id(i) for i in range(int(contract.get_case_count()))]
+    integrations = []
+    for i in range(int(contract.get_integration_count())):
+        caller, namespace = contract.get_integration_key(i).split("|", 1)
+        integrations.append(contract.get_integration(caller, namespace))
+    return {
+        "cases": [contract.get_case(case_id) for case_id in case_ids],
+        "assessments": [
+            contract.get_assessment_by_case(case_id, i)
+            for case_id in case_ids
+            for i in range(int(contract.get_assessment_count(case_id)))
+        ],
+        "integrations": integrations,
+        "events": [contract.get_event(i) for i in range(int(contract.get_event_count()))],
+    }
+
+
+@pytest.mark.parametrize("successor_state", ["LOCKED", "NOT_APPLICABLE", "UNRESOLVED"])
+def test_successor_creation_and_lifecycle(direct_deploy, direct_vm, direct_alice, direct_bob, successor_state):
     warp(direct_vm, "2026-08-25T12:00:00+00:00")
     contract = direct_deploy(CONTRACT_FILE)
 
@@ -437,13 +457,16 @@ def test_successor_creation_and_lifecycle(direct_deploy, direct_vm, direct_alice
 
     # Bob cannot create successor for Alice's case
     direct_vm.sender = direct_bob
+    before = lifecycle_snapshot(contract)
     with direct_vm.expect_revert("NOT_CASE_OWNER"):
         contract.create_successor(case1_id, "bob-succ-1", "2025-10-01")
+    assert lifecycle_snapshot(contract) == before
 
     # Alice creates successor with new activity date
     direct_vm.sender = direct_alice
     with direct_vm.expect_revert("ACTIVITY_DATE_UNCHANGED"):
         contract.create_successor(case1_id, "alice-succ-1", "2024-10-01")
+    assert lifecycle_snapshot(contract) == before
 
     succ_id = contract.create_successor(case1_id, "alice-succ-1", "2025-10-01")
     assert succ_id == "REAL-000002"
@@ -451,16 +474,35 @@ def test_successor_creation_and_lifecycle(direct_deploy, direct_vm, direct_alice
     # Old case now points to successor
     case1_data = json.loads(contract.get_case(case1_id))
     assert case1_data["successor_case_id"] == succ_id
+    assert case1_data["state"] == "LOCKED"
+    successor = json.loads(contract.get_case(succ_id))
+    assert successor["state"] == "DRAFT"
+    assert successor["predecessor_case_id"] == case1_id
 
     # Cannot create second successor for same old case
+    before = lifecycle_snapshot(contract)
     with direct_vm.expect_revert("SUCCESSOR_ALREADY_EXISTS"):
         contract.create_successor(case1_id, "alice-succ-2", "2025-11-01")
+    assert lifecycle_snapshot(contract) == before
 
     # Successor starts in DRAFT -> FROZEN -> assess to LOCKED
     contract.freeze_case(succ_id)
+    assert json.loads(contract.get_case(succ_id))["state"] == "FROZEN"
+    assert contract.get_case(case1_id) == before["cases"][0]
+    frozen = lifecycle_snapshot(contract)
+    direct_vm.sender = direct_bob
+    with direct_vm.expect_revert("CASE_NOT_LOCKED"):
+        contract.activate_integration("successor-checklist", succ_id)
+    assert lifecycle_snapshot(contract) == frozen
+    direct_vm.sender = direct_alice
     direct_vm.clear_mocks()
-    direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_2025_XML})
-    direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": FR_2025_JSON})
+    if successor_state == "UNRESOLVED":
+        direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 503, "body": "503 Service Unavailable"})
+    elif successor_state == "NOT_APPLICABLE":
+        direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_NO_REF_XML})
+    else:
+        direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_2025_XML})
+        direct_vm.mock_web(r".*federalregister\.gov.*", {"status": 200, "body": FR_2025_JSON})
     resp2 = {
         "schema_version": "1.0.0",
         "outcome": "EDITION_APPLIES",
@@ -480,12 +522,24 @@ def test_successor_creation_and_lifecycle(direct_deploy, direct_vm, direct_alice
         ],
         "reason_code": "ANNUAL_EDITION_APPLIES",
     }
-    direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(resp2))
+    if successor_state == "NOT_APPLICABLE":
+        resp2.update(outcome="NO_BOUND_REFERENCE", edition="", effective_from="",
+                     effective_to="", authority_documents=[], reason_code="NO_MATCHING_IBR_REFERENCE")
+        direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(resp2))
+    elif successor_state == "LOCKED":
+        direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(resp2))
     contract.assess_case(succ_id)
+    assert direct_vm.run_validator() is True
 
-    assert json.loads(contract.get_case(succ_id))["state"] == "LOCKED"
-    # Predecessor case1 is now SUPERSEDED_BY_SUCCESSOR!
-    assert json.loads(contract.get_case(case1_id))["state"] == "SUPERSEDED_BY_SUCCESSOR"
+    assert json.loads(contract.get_case(succ_id))["state"] == successor_state
+    predecessor_state = "LOCKED" if successor_state == "UNRESOLVED" else "SUPERSEDED_BY_SUCCESSOR"
+    assert json.loads(contract.get_case(case1_id))["state"] == predecessor_state
+    assert json.loads(contract.get_case(case1_id))["successor_case_id"] == succ_id
+    if successor_state != "LOCKED":
+        before = lifecycle_snapshot(contract)
+        with direct_vm.expect_revert("CASE_NOT_LOCKED"):
+            contract.activate_integration("successor-checklist", succ_id)
+        assert lifecycle_snapshot(contract) == before
 
 
 def test_integration_binding_and_advancement(direct_deploy, direct_vm, direct_alice, direct_bob):
@@ -534,6 +588,22 @@ def test_integration_binding_and_advancement(direct_deploy, direct_vm, direct_al
     assert integ["case_id"] == case1_id
     assert contract.get_integration_count() == 1
 
+    # Trimmed same-case rebinding cannot alter timestamps, counters or events.
+    before = lifecycle_snapshot(contract)
+    warp(direct_vm, "2026-08-25T12:01:00+00:00")
+    contract.activate_integration("  checklist-ns-1  ", case1_id)
+    assert lifecycle_snapshot(contract) == before
+    for namespace in ("", "  x  ", "x" * 65):
+        with direct_vm.expect_revert("INVALID_NAMESPACE"):
+            contract.activate_integration(namespace, case1_id)
+        assert lifecycle_snapshot(contract) == before
+
+    # Identical namespace belongs to another caller independently.
+    direct_vm.sender = direct_alice
+    contract.activate_integration("checklist-ns-1", case1_id)
+    assert contract.get_integration_count() == 2
+    assert contract.get_integration(direct_bob.as_hex, "checklist-ns-1") == before["integrations"][0]
+
     # Create un-linked case3
     direct_vm.sender = direct_alice
     case3_id = contract.create_case("case-3", "71", "71.1", "2023-10-01", "FAA Order JO 7400.11")
@@ -542,12 +612,20 @@ def test_integration_binding_and_advancement(direct_deploy, direct_vm, direct_al
 
     # Bob cannot advance namespace to unlinked case3
     direct_vm.sender = direct_bob
+    before = lifecycle_snapshot(contract)
     with direct_vm.expect_revert("INTEGRATION_ADVANCE_NOT_DECLARED_SUCCESSOR"):
         contract.activate_integration("checklist-ns-1", case3_id)
+    assert lifecycle_snapshot(contract) == before
 
     # Alice creates successor case2 for case1
     direct_vm.sender = direct_alice
     case2_id = contract.create_successor(case1_id, "case-2", "2025-10-01")
+    before = lifecycle_snapshot(contract)
+    direct_vm.sender = direct_bob
+    with direct_vm.expect_revert("CASE_NOT_LOCKED"):
+        contract.activate_integration("checklist-ns-1", case2_id)
+    assert lifecycle_snapshot(contract) == before
+    direct_vm.sender = direct_alice
     contract.freeze_case(case2_id)
     direct_vm.clear_mocks()
     direct_vm.mock_web(r".*ecfr\.gov.*", {"status": 200, "body": ECFR_2025_XML})
@@ -574,12 +652,21 @@ def test_integration_binding_and_advancement(direct_deploy, direct_vm, direct_al
     direct_vm.mock_llm(r".*You evaluate incorporation-by-reference.*", json.dumps(resp2))
     contract.assess_case(case2_id)
 
+    # Supersession does not advance either integrator automatically.
+    assert json.loads(contract.get_case(case1_id))["state"] == "SUPERSEDED_BY_SUCCESSOR"
+    assert json.loads(contract.get_integration(direct_bob.as_hex, "checklist-ns-1"))["case_id"] == case1_id
+    alice_binding = contract.get_integration(direct_alice.as_hex, "checklist-ns-1")
+
     # Bob can advance integration to declared successor case2
     direct_vm.sender = direct_bob
     contract.activate_integration("checklist-ns-1", case2_id)
     integ = json.loads(contract.get_integration(direct_bob.as_hex, "checklist-ns-1"))
     assert integ["case_id"] == case2_id
     assert integ["previous_case_id"] == case1_id
+    assert contract.get_integration(direct_alice.as_hex, "checklist-ns-1") == alice_binding
+    before = lifecycle_snapshot(contract)
+    contract.activate_integration("checklist-ns-1", case2_id)
+    assert lifecycle_snapshot(contract) == before
 
 
 def test_root_slot_upgrade_and_storage_preservation(direct_deploy, direct_vm, direct_alice, direct_bob):

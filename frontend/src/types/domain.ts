@@ -99,9 +99,13 @@ export interface WalletState {
   isCorrectChain: boolean;
 }
 
-export type TxStep = 'IDLE' | 'SIGNING' | 'SUBMITTED' | 'FINALIZING' | 'SUCCESS' | 'ERROR';
+export type TxStep = 'IDLE' | 'WAITING_FOR_WALLET' | 'SUBMITTED' | 'WAITING_FOR_FINALITY' |
+  'VERIFYING_EXECUTION' | 'VERIFYING_READBACK' | 'SUCCESS' | 'REJECTED' | 'FAILED' | 'RECONCILIATION_REQUIRED';
 
 export interface PendingOperation {
+  sender?: string;
+  chainId?: number;
+  contractAddress?: string;
   id: string;
   type: string;
   txHash?: string;

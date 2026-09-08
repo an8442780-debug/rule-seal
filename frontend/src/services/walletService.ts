@@ -8,7 +8,6 @@ const STRICT_RDNS_ALLOWLIST = ['io.metamask', 'com.okex.wallet', 'io.rabby'];
 export class WalletService {
   private static instance: WalletService;
   private announcedProviders: Map<string, EIP6963ProviderDetail> = new Map();
-  private hasEip6963Announcement = false;
   private activeListenersCleanup: (() => void) | null = null;
   private state: WalletState = {
     connected: false,
@@ -49,7 +48,6 @@ export class WalletService {
       // Strict RDNS allowlist check
       if (!STRICT_RDNS_ALLOWLIST.includes(rdns)) return;
 
-      this.hasEip6963Announcement = true;
 
       // Deduplicate by UUID and provider identity
       const existingKey = Array.from(this.announcedProviders.keys()).find((k) => {
@@ -72,46 +70,24 @@ export class WalletService {
 
   public getDiscoveredProviders(): EIP6963ProviderDetail[] {
     const list = Array.from(this.announcedProviders.values());
-    if (list.length > 0) {
-      return list;
-    }
-
-    // Bounded legacy fallback if no EIP-6963 providers found
-    if (!this.hasEip6963Announcement && typeof window !== 'undefined' && (window as any).ethereum) {
-      const eth = (window as any).ethereum;
-      let name = '';
-      let rdns = '';
-
-      if (eth.isRabby) {
-        name = 'Rabby Wallet';
-        rdns = 'io.rabby';
-      } else if (eth.isOkxWallet || eth.isOKExWallet) {
-        name = 'OKX Wallet';
-        rdns = 'com.okex.wallet';
-      } else if (eth.isMetaMask) {
-        name = 'MetaMask';
-        rdns = 'io.metamask';
-      }
-
-      // Unknown legacy provider MUST fail closed
-      if (!name || !rdns) {
-        return [];
-      }
-
-      return [
-        {
-          info: {
-            uuid: 'legacy-injected',
-            name,
-            icon: '',
-            rdns,
-          },
-          provider: eth,
-        },
-      ];
-    }
-
-    return [];
+    if (typeof window === 'undefined') return list;
+    // EIP-6963 announcements replace only the same legacy wallet; other detected
+    // wallets remain selectable. Ambiguous flags fail closed.
+    const candidates = [
+      ...(((window as any).ethereum?.providers ?? []) as any[]),
+      (window as any).ethereum,
+      (window as any).okxwallet,
+    ].filter((provider) => provider && typeof provider.request === 'function');
+    const legacy = candidates.flatMap((provider) => {
+      const ids = [provider.isMetaMask === true ? ['MetaMask', 'io.metamask'] : [],
+        provider.isOkxWallet === true || provider.isOKExWallet === true ? ['OKX Wallet', 'com.okex.wallet'] : [],
+        provider.isRabby === true ? ['Rabby', 'io.rabby'] : []].filter((entry) => entry.length);
+      if (ids.length !== 1) return [];
+      const [name, rdns] = ids[0];
+      if (list.some((item) => item.info.rdns.toLowerCase() === rdns)) return [];
+      return [{ info: { uuid: `legacy-${rdns}`, name, icon: '', rdns }, provider }];
+    });
+    return [...list, ...legacy];
   }
 
   public getState(): WalletState {
@@ -258,7 +234,6 @@ export class WalletService {
 
   public clearDiscoveredProviders(): void {
     this.announcedProviders.clear();
-    this.hasEip6963Announcement = false;
   }
 
   public disconnect(): void {

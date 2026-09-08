@@ -20,7 +20,7 @@ from gltest.direct.sdk_loader import setup_sdk_paths
 tools_root = Path(os.environ.get("GENLAYER_TOOLS_DIR", "E:/Genlayer-Tools"))
 sdk_loader.CACHE_DIR = tools_root / "GenVM" / "v0.3.0-rc7"
 
-CONTRACT_PATH = Path(__file__).parents[1] / "contracts" / "regulatory_edition_applicability_lock.py"
+CONTRACT_PATH = Path(__file__).parents[1] / "contracts" / "rule_seal.py"
 setup_sdk_paths(CONTRACT_PATH)
 
 

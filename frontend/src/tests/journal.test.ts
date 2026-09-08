@@ -1,10 +1,15 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { journalService } from '../services/journalService.ts';
+import { JournalService, JOURNAL_STORAGE_KEY } from '../services/journalService.ts';
 import { sharedRpc } from '../services/rpcClient.ts';
 import { PendingOperation } from '../types/domain.ts';
 
 describe('JournalService (Restart-Safe Write Pipeline & Reconciliation)', () => {
+  let journalService: JournalService;
+  const hash = `0x${'a'.repeat(64)}`;
+  const operation = (): PendingOperation => ({ id: 'reserved', type: 'create_case', timestamp: Date.now(), params: {}, status: 'PRE_SIGN' });
   beforeEach(() => {
+    vi.restoreAllMocks();
+    journalService = new JournalService();
     localStorage.clear();
     sessionStorage.clear();
     journalService.releaseWriteLock('op-123');
@@ -95,11 +100,11 @@ describe('JournalService (Restart-Safe Write Pipeline & Reconciliation)', () => 
     };
 
     journalService.savePendingOperation(op);
-    journalService.updateHash('op-456', '0xabcdef123456');
+    journalService.updateHash('op-456', hash);
 
     const list = journalService.getPendingOperations();
     expect(list[0].status).toBe('SUBMITTED');
-    expect(list[0].txHash).toBe('0xabcdef123456');
+    expect(list[0].txHash).toBe(hash);
   });
 
   it('removes completed operation from persistent storage', () => {
@@ -125,7 +130,7 @@ describe('JournalService (Restart-Safe Write Pipeline & Reconciliation)', () => 
       timestamp: Date.now(),
       params: { caseId: 'REAL-000001' },
       status: 'SUBMITTED',
-      txHash: '0xfin123',
+      txHash: `0x${'1'.repeat(64)}`,
     };
     const failedOp: PendingOperation = {
       id: 'op-fail',
@@ -133,7 +138,7 @@ describe('JournalService (Restart-Safe Write Pipeline & Reconciliation)', () => 
       timestamp: Date.now(),
       params: { caseId: 'REAL-000002' },
       status: 'SUBMITTED',
-      txHash: '0xfail123',
+      txHash: `0x${'2'.repeat(64)}`,
     };
     const pendingOp: PendingOperation = {
       id: 'op-pending',
@@ -141,33 +146,29 @@ describe('JournalService (Restart-Safe Write Pipeline & Reconciliation)', () => 
       timestamp: Date.now(),
       params: { nonce: 'nonce-p' },
       status: 'SUBMITTED',
-      txHash: '0xpending123',
+      txHash: `0x${'3'.repeat(64)}`,
     };
 
-    journalService.savePendingOperation(finalizedOp);
-    journalService.releaseWriteLock('op-fin');
-    journalService.savePendingOperation(failedOp);
-    journalService.releaseWriteLock('op-fail');
-    journalService.savePendingOperation(pendingOp);
-    journalService.releaseWriteLock('op-pending');
+    // Imported recovery fixtures, not three authorized concurrent submissions.
+    localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify([finalizedOp, failedOp, pendingOp]));
 
     const rawClient = sharedRpc.getRawClient();
     vi.spyOn(rawClient, 'getTransaction').mockImplementation(async ({ hash }: any) => {
-      if (hash === '0xfin123') {
+      if (hash === finalizedOp.txHash) {
         return {
           statusName: 'FINALIZED',
           txExecutionResultName: 'FINISHED_WITH_RETURN',
           result: 1,
         };
       }
-      if (hash === '0xfail123') {
+      if (hash === failedOp.txHash) {
         return {
           statusName: 'FINALIZED',
           txExecutionResultName: 'FINISHED_WITH_ERROR',
           error: 'CASE_NOT_FROZEN',
         };
       }
-      if (hash === '0xpending123') {
+      if (hash === pendingOp.txHash) {
         return {
           statusName: 'ACCEPTED',
         };
@@ -187,5 +188,70 @@ describe('JournalService (Restart-Safe Write Pipeline & Reconciliation)', () => 
     expect(remaining.some((o) => o.id === 'op-fail')).toBe(false);
     // Pending op remains
     expect(remaining.some((o) => o.id === 'op-pending')).toBe(true);
+  });
+
+  it('uses only the configured RuleSeal journal key', () => {
+    sessionStorage.setItem('real_pending_ops_v1', JSON.stringify([operation()]));
+    expect(journalService.getPendingOperations()).toEqual([]);
+  });
+
+  it('retains an unknown pre-hash operation across reload and blocks another write with zero RPC', async () => {
+    journalService.savePendingOperation(operation());
+    const reloaded = new JournalService();
+    const rpc = vi.spyOn(sharedRpc, 'getTransactionOutcome');
+    const result = await reloaded.reconcilePendingOperations();
+    expect(result.stillPending).toEqual(['reserved']);
+    expect(result.failed).toEqual([]);
+    expect(reloaded.getPendingOperations()).toHaveLength(1);
+    expect(() => reloaded.savePendingOperation({ ...operation(), id: 'second' })).toThrow('CONCURRENT_WRITE_LOCKED');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it.each(['{broken', '{}', '[{}]', '[{"id":"x"}]'])('fails closed on malformed recovery data: %s', (raw) => {
+    localStorage.setItem(JOURNAL_STORAGE_KEY, raw);
+    expect(() => journalService.getPendingOperations()).toThrow('RECOVERY_STORAGE_UNREADABLE');
+    expect(() => journalService.savePendingOperation(operation())).toThrow('RECOVERY_STORAGE_UNREADABLE');
+    expect(localStorage.getItem(JOURNAL_STORAGE_KEY)).toBe(raw);
+  });
+
+  it('does not use stale session data as the durable authority', () => {
+    sessionStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify([operation()]));
+    expect(journalService.getPendingOperations()).toEqual([]);
+  });
+
+  it('retains the returned hash in memory when durable persistence fails, and blocks another write', () => {
+    journalService.savePendingOperation(operation());
+    const setter = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('quota'); });
+    expect(() => journalService.updateHash('reserved', hash)).toThrow('STORAGE_PERSIST_FAILED');
+    expect(journalService.getPendingOperations()[0].txHash).toBe(hash);
+    setter.mockRestore();
+    expect(() => journalService.savePendingOperation({ ...operation(), id: 'second' })).toThrow('CONCURRENT_WRITE_LOCKED');
+    journalService.updateHash('reserved', hash);
+    expect(new JournalService().getPendingOperations()[0].txHash).toBe(hash);
+  });
+
+  it('keeps the existing hash and lock if terminal cleanup cannot persist', () => {
+    journalService.savePendingOperation(operation());
+    journalService.updateHash('reserved', hash);
+    const setter = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('denied'); });
+    expect(() => journalService.removeOperation('reserved')).toThrow('STORAGE_PERSIST_FAILED');
+    expect(journalService.getPendingOperations()[0].txHash).toBe(hash);
+    expect(() => journalService.acquireWriteLock('second')).toThrow('CONCURRENT_WRITE_LOCKED');
+    setter.mockRestore();
+    journalService.removeOperation('reserved');
+    expect(journalService.getPendingOperations()).toEqual([]);
+  });
+
+  it('single-flights reconciliation and retains finalized success until readback agrees', async () => {
+    journalService.savePendingOperation(operation());
+    journalService.updateHash('reserved', hash);
+    let finish!: (value: any) => void;
+    const rpc = vi.spyOn(sharedRpc, 'getTransactionOutcome').mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+    const first = journalService.reconcilePendingOperations(undefined, async () => false);
+    await expect(journalService.reconcilePendingOperations()).rejects.toThrow('RECONCILIATION_IN_PROGRESS');
+    finish({ transaction: {}, status: 'FINALIZED', execution: 'FINISHED_WITH_RETURN' });
+    expect((await first).stillPending).toEqual(['reserved']);
+    expect(journalService.getPendingOperations()[0].txHash).toBe(hash);
+    expect(rpc).toHaveBeenCalledOnce();
   });
 });

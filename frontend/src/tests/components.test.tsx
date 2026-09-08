@@ -11,8 +11,12 @@ import { IntegratorWorkbench } from '../components/IntegratorWorkbench.tsx';
 import { SuccessorWizard } from '../components/SuccessorWizard.tsx';
 import { AuditorView } from '../components/AuditorView.tsx';
 import { App } from '../App.tsx';
+import { RegulatoryLandingIntro } from '../components/RegulatoryLandingIntro.tsx';
 import { contractService } from '../services/contractService.ts';
 import { sharedRpc } from '../services/rpcClient.ts';
+import { JOURNAL_STORAGE_KEY } from '../services/journalService.ts';
+import { TransactionStatusModal } from '../components/TransactionStatusModal.tsx';
+import type { TxStep } from '../types/domain.ts';
 import { CaseRecord } from '../types/domain.ts';
 
 // @ts-ignore
@@ -43,6 +47,77 @@ describe('Mounted Page Components & User Workflows', () => {
     }
   });
 
+  it('provides all workflow guidance without RPC or wallet requests', async () => {
+    const read = vi.spyOn(sharedRpc, 'readContract');
+    const request = vi.fn();
+    const original = (window as any).ethereum;
+    (window as any).ethereum = { request };
+    try {
+      await act(async () => { root?.render(<RegulatoryLandingIntro />); });
+      const guide = container?.querySelector('details');
+      expect(guide?.querySelector('summary')?.textContent).toContain('How it works');
+      expect(guide?.textContent).toContain('Create Draft Case');
+      expect(guide?.textContent).toContain('Freeze Case for Resolver Assessment');
+      expect(guide?.textContent).toContain('Execute Validator Assessment');
+      expect(guide?.textContent).toContain('Create Successor Draft');
+      expect(guide?.textContent).toContain('Bind / Advance Integration Namespace');
+      expect(guide?.textContent).toContain('Auditor Hub');
+      expect(guide?.textContent).toContain('does not supersede the predecessor');
+      expect(guide?.textContent).toContain('three total assessment attempts');
+      expect(guide?.textContent).toContain('Reconcile with Chain');
+      expect(read).not.toHaveBeenCalled();
+      expect(request).not.toHaveBeenCalled();
+    } finally { (window as any).ethereum = original; }
+  });
+
+  it.each<TxStep>(['IDLE', 'WAITING_FOR_WALLET', 'SUBMITTED', 'WAITING_FOR_FINALITY', 'VERIFYING_EXECUTION', 'VERIFYING_READBACK', 'SUCCESS', 'REJECTED', 'FAILED', 'RECONCILIATION_REQUIRED'])('renders the actual transaction phase %s with correct spinner and announcement', async (step) => {
+    const hash = `0x${'b'.repeat(64)}`;
+    await act(async () => { root?.render(<TransactionStatusModal isOpen step={step} detail={{ txHash: hash }} onClose={vi.fn()} />); });
+    const phase = document.querySelector('[data-transaction-phase]');
+    if (step === 'IDLE') { expect(phase).toBeNull(); return; }
+    expect(phase?.getAttribute('data-transaction-phase')).toBe(step);
+    const pending = ['WAITING_FOR_WALLET', 'SUBMITTED', 'WAITING_FOR_FINALITY', 'VERIFYING_EXECUTION', 'VERIFYING_READBACK'].includes(step);
+    expect(Boolean(document.querySelector('.transaction-spinner'))).toBe(pending);
+    expect(document.querySelector('.transaction-hash code')?.textContent).toBe(hash);
+    expect(phase?.getAttribute('role')).toBe(['REJECTED', 'FAILED', 'RECONCILIATION_REQUIRED'].includes(step) ? 'alert' : 'status');
+    expect(document.querySelector('#tx-modal-title')?.textContent === 'Transaction complete').toBe(step === 'SUCCESS');
+  });
+
+  it('contains focus from the dialog boundary and restores the original trigger across phase changes', async () => {
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+    trigger.focus();
+    const close = vi.fn();
+    try {
+      await act(async () => { root?.render(<TransactionStatusModal isOpen step="WAITING_FOR_FINALITY" detail={{ txHash: `0x${'a'.repeat(64)}` }} onClose={close} />); });
+      const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!;
+      dialog.focus();
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+      expect(document.activeElement?.tagName).toBe('A');
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      expect(close).not.toHaveBeenCalled();
+      await act(async () => { root?.render(<TransactionStatusModal isOpen step="SUCCESS" onClose={close} />); });
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+      expect(close).toHaveBeenCalledOnce();
+      await act(async () => { root?.render(<TransactionStatusModal isOpen={false} step="IDLE" onClose={close} />); });
+      expect(document.activeElement).toBe(trigger);
+    } finally { trigger.remove(); }
+  });
+
+  it('keeps public workflows mounted and reports unreadable recovery data without deleting it', async () => {
+    localStorage.setItem(JOURNAL_STORAGE_KEY, '{broken');
+    vi.spyOn(contractService, 'getCaseCount').mockResolvedValue(0);
+    await act(async () => { root?.render(<App />); });
+    expect(container?.textContent).toContain('Recovery storage is unavailable or unreadable');
+    expect(container?.querySelector('[role="tablist"]')).not.toBeNull();
+    expect(localStorage.getItem(JOURNAL_STORAGE_KEY)).toBe('{broken');
+    const reconcile = Array.from(container!.querySelectorAll('button')).find((button) => button.textContent === 'Reconcile with Chain')!;
+    await act(async () => { reconcile.click(); });
+    expect(container?.textContent).toContain('Verification could not finish');
+    expect(reconcile.disabled).toBe(false);
+    expect(localStorage.getItem(JOURNAL_STORAGE_KEY)).toBe('{broken');
+  });
+
   it('renders Header with disconnected state and responds to connect click', async () => {
     const mockOpenModal = vi.fn();
     const mockDisconnect = vi.fn();
@@ -68,7 +143,7 @@ describe('Mounted Page Components & User Workflows', () => {
       );
     });
 
-    expect(container?.textContent).toContain('Regulatory Edition Applicability Lock');
+    expect(container?.textContent).toContain('RuleSeal');
     expect(container?.textContent).toContain('Connect Wallet');
 
     const connectBtn = container?.querySelector('button');
@@ -247,7 +322,7 @@ describe('Mounted Page Components & User Workflows', () => {
     expect(container?.textContent).toContain('Execute Validator Assessment');
   });
 
-  it('renders IntegratorWorkbench and binds namespace to locked case', async () => {
+  it('renders IntegratorWorkbench with explicit binding and no-op guidance', async () => {
     const mockWallet = {
       connected: true,
       address: '0x1111111111111111111111111111111111111111',
@@ -292,6 +367,10 @@ describe('Mounted Page Components & User Workflows', () => {
 
     expect(container?.textContent).toContain('Downstream Checklist Integrator Workbench');
     expect(container?.textContent).toContain('Bind / Advance Integration Namespace');
+    expect(container?.textContent).toContain('same still-LOCKED case changes nothing');
+    expect(container?.textContent).toContain('NOT_APPLICABLE cases cannot be bound');
+    expect(container?.textContent).toContain('supersession never advances a checklist automatically');
+    expect(container?.querySelector('label[for="integration-target-case"]')).not.toBeNull();
   });
 
   it('renders SuccessorWizard with predecessor linkage', async () => {
@@ -341,6 +420,9 @@ describe('Mounted Page Components & User Workflows', () => {
 
     expect(container?.textContent).toContain('Successor Lineage Proposal Wizard');
     expect(container?.textContent).toContain('Predecessor Case ID');
+    expect(container?.textContent).toContain('DRAFT, FROZEN or UNRESOLVED');
+    expect(container?.textContent).toContain('only after the successor reaches LOCKED or NOT_APPLICABLE');
+    expect(container?.textContent).toContain('Checklist bindings never advance automatically');
     const inputEl = container?.querySelector('input[disabled]') as HTMLInputElement;
     expect(inputEl?.value).toBe('REAL-000001');
   });
@@ -374,7 +456,7 @@ describe('Mounted Page Components & User Workflows', () => {
       root?.render(<App />);
     });
 
-    expect(container?.textContent).toContain('Regulatory Edition Applicability Lock');
+    expect(container?.textContent).toContain('RuleSeal');
     expect(container?.textContent).toContain('Public Evidence Lookup');
 
     // Click on Case Creator tab

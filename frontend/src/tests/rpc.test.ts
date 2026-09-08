@@ -11,7 +11,30 @@ describe('RpcClient', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it.each(['clear', 'method'])('discards older reads after %s invalidation without evicting a newer read', async (mode) => {
+    const resolve: Array<(value: string) => void> = [];
+    const read = vi.spyOn(sharedRpc.getRawClient(), 'readContract').mockImplementation(
+      () => new Promise<string>((done) => resolve.push(done))
+    );
+    const old = sharedRpc.readContract('get_case', ['case'], 'lookup', false, MOCK_ADDR);
+    const rejected = expect(old).rejects.toThrow('RPC_READ_INVALIDATED');
+    if (mode === 'clear') sharedRpc.clearCache();
+    else sharedRpc.invalidateMethod('get_case');
+    const fresh = sharedRpc.readContract('get_case', ['case'], 'lookup', true, MOCK_ADDR);
+    expect(read).toHaveBeenCalledTimes(2);
+    resolve[0]('stale');
+    await rejected;
+    const joined = sharedRpc.readContract('get_case', ['case'], 'lookup', true, MOCK_ADDR);
+    expect(read).toHaveBeenCalledTimes(2);
+    resolve[1]('fresh');
+    expect(await fresh).toBe('fresh');
+    expect(await joined).toBe('fresh');
+    expect(await sharedRpc.readContract('get_case', ['case'], 'lookup', false, MOCK_ADDR)).toBe('fresh');
+    expect(read).toHaveBeenCalledTimes(2);
   });
 
   it('tracks journey metrics when readContract is executed', async () => {
@@ -24,6 +47,43 @@ describe('RpcClient', () => {
     const metrics = sharedRpc.getJourneyMetrics();
     expect(metrics.total).toBe(2);
     expect(metrics.journeys['public_lookup']).toBe(2);
+  });
+
+  it('uses the approved 1s and 3s retry delays', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const read = vi.spyOn(sharedRpc.getRawClient(), 'readContract')
+      .mockRejectedValueOnce(Object.assign(new Error('busy'), {status: 429}))
+      .mockRejectedValueOnce(new Error('HTTP 599 Unavailable'))
+      .mockResolvedValue('ok');
+    const result = sharedRpc.readContract('get_case', ['retry'], 'lookup', true, MOCK_ADDR);
+    await vi.advanceTimersByTimeAsync(999);
+    expect(read).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(read).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(2999);
+    expect(read).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await result).toBe('ok');
+    expect(read).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not retry a semantic error containing HTTP-like numbers', async () => {
+    const read = vi.spyOn(sharedRpc.getRawClient(), 'readContract').mockRejectedValue(new Error('CASE_500_NOT_FOUND'));
+    await expect(sharedRpc.readContract('get_case', ['bad'], 'lookup', true, MOCK_ADDR)).rejects.toThrow('CASE_500_NOT_FOUND');
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not issue another request after invalidation during backoff', async () => {
+    vi.useFakeTimers();
+    const read = vi.spyOn(sharedRpc.getRawClient(), 'readContract').mockRejectedValue(new Error('HTTP 503 Unavailable'));
+    const result = sharedRpc.readContract('get_case', ['cancel'], 'lookup', true, MOCK_ADDR);
+    const rejected = expect(result).rejects.toThrow('RPC_READ_INVALIDATED');
+    await vi.advanceTimersByTimeAsync(0);
+    sharedRpc.clearCache();
+    await vi.runAllTimersAsync();
+    await rejected;
+    expect(read).toHaveBeenCalledTimes(1);
   });
 
   it('deduplicates concurrent in-flight readContract calls', async () => {

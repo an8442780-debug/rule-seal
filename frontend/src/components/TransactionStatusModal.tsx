@@ -1,172 +1,108 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { TxStep } from '../types/domain.ts';
 import { STUDIONET_EXPLORER } from '../config/chain.ts';
 
-interface TransactionStatusModalProps {
+const PHASES: TxStep[] = ['WAITING_FOR_WALLET', 'SUBMITTED', 'WAITING_FOR_FINALITY', 'VERIFYING_EXECUTION', 'VERIFYING_READBACK', 'SUCCESS'];
+const COPY: Record<TxStep, [string, string]> = {
+  IDLE: ['Ready', 'No transaction is in progress.'],
+  WAITING_FOR_WALLET: ['Confirm in your wallet', 'Review the request in your selected wallet and confirm or reject it.'],
+  SUBMITTED: ['Transaction submitted', 'Your wallet returned a transaction hash. The result is not yet verified.'],
+  WAITING_FOR_FINALITY: ['Waiting for finality', 'Studionet is processing the transaction. Submission or acceptance is not final success.'],
+  VERIFYING_EXECUTION: ['Verifying execution', 'The transaction is finalized. Its execution result is being checked.'],
+  VERIFYING_READBACK: ['Verifying the result', 'The finalized execution is being compared with authoritative contract state.'],
+  SUCCESS: ['Transaction complete', 'Finality, successful execution and the resulting contract state were verified.'],
+  REJECTED: ['Request rejected', 'You declined the wallet request. Review the form before trying again.'],
+  FAILED: ['Transaction failed', 'The finalized transaction did not execute successfully.'],
+  RECONCILIATION_REQUIRED: ['Verification interrupted', 'Do not submit again. Close this dialog and use Reconcile with Chain to check the existing operation.'],
+};
+
+interface Props {
   isOpen: boolean;
   step: TxStep;
   detail?: any;
   onClose: () => void;
 }
 
-export const TransactionStatusModal: React.FC<TransactionStatusModalProps> = ({
-  isOpen,
-  step,
-  detail,
-  onClose,
-}) => {
-  if (!isOpen || step === 'IDLE') return null;
+export const TransactionStatusModal: React.FC<Props> = ({ isOpen, step, detail, onClose }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  const isPending = PHASES.includes(step) && step !== 'SUCCESS';
+  const pendingRef = useRef(isPending);
+  const visible = isOpen && step !== 'IDLE';
+  const [copyStatus, setCopyStatus] = useState('');
+  onCloseRef.current = onClose;
+  pendingRef.current = isPending;
 
-  const getStepTitle = () => {
-    switch (step) {
-      case 'SIGNING':
-        return 'Awaiting Wallet Signature';
-      case 'SUBMITTED':
-        return 'Transaction Submitted to Studionet';
-      case 'FINALIZING':
-        return 'Validators Executing Consensus';
-      case 'SUCCESS':
-        return 'Transaction Finalized & Authoritative';
-      case 'ERROR':
-        return 'Transaction Failed';
-      default:
-        return 'Processing Transaction';
-    }
-  };
+  useEffect(() => {
+    if (!visible) return;
+    setCopyStatus('');
+    const trigger = document.activeElement as HTMLElement | null;
+    const timer = setTimeout(() => dialogRef.current?.focus(), 0);
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (!pendingRef.current) onCloseRef.current();
+      }
+      if (event.key !== 'Tab') return;
+      const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], [tabindex="0"]') ?? []);
+      const first = controls[0];
+      const last = controls.at(-1);
+      if (!first || !last) { event.preventDefault(); dialogRef.current?.focus(); return; }
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || active === dialogRef.current || !dialogRef.current?.contains(active))) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && (active === last || !dialogRef.current?.contains(active))) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    window.addEventListener('keydown', keydown);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('keydown', keydown);
+      if (trigger?.isConnected) trigger.focus();
+    };
+  }, [visible]);
 
-  const getStepDescription = () => {
-    switch (step) {
-      case 'SIGNING':
-        return 'Please confirm and sign the transaction in your connected wallet extension.';
-      case 'SUBMITTED':
-        return 'Transaction has been broadcast to GenLayer Studionet RPC and is queued for leader inclusion.';
-      case 'FINALIZING':
-        return 'GenLayer intelligent validators are fetching external regulatory sources and verifying substantive consensus.';
-      case 'SUCCESS':
-        return 'The operation succeeded and the immutable state has been recorded on-chain.';
-      case 'ERROR':
-        return detail?.error || detail?.message || 'An error occurred while processing the transaction.';
-      default:
-        return '';
-    }
-  };
+  if (!visible) return null;
+  const hash = /^0x[0-9a-fA-F]{64}$/.test(detail?.txHash ?? '') ? detail.txHash as string : null;
+  const alert = ['FAILED', 'REJECTED', 'RECONCILIATION_REQUIRED'].includes(step);
+  const [title, description] = COPY[step];
 
-  const txHash = detail?.txHash || (typeof detail === 'string' && detail.startsWith('0x') ? detail : null);
-
-  return (
-    <div className="modal-overlay" role="dialog" aria-modal="true">
-      <div className="modal-content" style={{ maxWidth: '480px' }}>
-        <div className="modal-header">
-          <h3 className="modal-title">{getStepTitle()}</h3>
-          {(step === 'SUCCESS' || step === 'ERROR') && (
-            <button className="btn btn-secondary btn-sm" onClick={onClose} aria-label="Close">
-              ✕
-            </button>
-          )}
+  return createPortal(
+    <div className="modal-overlay" onClick={(event) => {
+      if (event.target === event.currentTarget && !pendingRef.current) onCloseRef.current();
+    }}>
+      <div ref={dialogRef} className="modal-content transaction-dialog" role="dialog" aria-modal="true"
+        aria-labelledby="tx-modal-title" aria-describedby="tx-modal-description" tabIndex={-1}>
+        <div data-transaction-phase={step} role={alert ? 'alert' : 'status'} aria-live={alert ? 'assertive' : 'polite'} aria-atomic="true">
+          <h2 id="tx-modal-title">{title}</h2>
+          {isPending && <span className="transaction-spinner" aria-hidden="true" />}
+          <p id="tx-modal-description">{description}</p>
         </div>
-
-        <div style={{ textAlign: 'center', margin: '24px 0' }}>
-          {step !== 'SUCCESS' && step !== 'ERROR' && (
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                border: '3px solid var(--border-color)',
-                borderTop: '3px solid var(--accent-primary)',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-                margin: '0 auto 16px auto',
-              }}
-            />
-          )}
-
-          {step === 'SUCCESS' && (
-            <div
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                background: '#dcfce7',
-                color: '#16a34a',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px',
-                fontWeight: 700,
-                margin: '0 auto 16px auto',
-              }}
-            >
-              ✓
-            </div>
-          )}
-
-          {step === 'ERROR' && (
-            <div
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                background: '#fee2e2',
-                color: '#dc2626',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '24px',
-                fontWeight: 700,
-                margin: '0 auto 16px auto',
-              }}
-            >
-              ✕
-            </div>
-          )}
-
-          <p style={{ fontSize: '14px', color: 'var(--text-main)', marginBottom: '12px' }}>
-            {getStepDescription()}
-          </p>
-
-          {txHash && (
-            <div style={{ background: 'var(--bg-card-alt)', padding: '8px 12px', borderRadius: '4px', marginTop: '12px' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                TRANSACTION HASH
-              </div>
-              <a
-                href={`${STUDIONET_EXPLORER}/tx/${txHash}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mono"
-                style={{ fontSize: '12px', color: 'var(--accent-primary)', wordBreak: 'break-all' }}
-              >
-                {txHash}
-              </a>
-            </div>
-          )}
-        </div>
-
-        {/* Step Progress Indicators */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', margin: '16px 0', fontSize: '11px', color: 'var(--text-muted)' }}>
-          <span style={{ fontWeight: step === 'SIGNING' ? 700 : 400, color: step === 'SIGNING' ? 'var(--accent-primary)' : 'inherit' }}>
-            1. Sign
-          </span>
-          <span>→</span>
-          <span style={{ fontWeight: step === 'SUBMITTED' ? 700 : 400, color: step === 'SUBMITTED' ? 'var(--accent-primary)' : 'inherit' }}>
-            2. Broadcast
-          </span>
-          <span>→</span>
-          <span style={{ fontWeight: step === 'FINALIZING' ? 700 : 400, color: step === 'FINALIZING' ? 'var(--accent-primary)' : 'inherit' }}>
-            3. Consensus
-          </span>
-          <span>→</span>
-          <span style={{ fontWeight: step === 'SUCCESS' ? 700 : 400, color: step === 'SUCCESS' ? '#16a34a' : 'inherit' }}>
-            4. Verify
-          </span>
-        </div>
-
-        {(step === 'SUCCESS' || step === 'ERROR') && (
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={onClose}>
-            Close
-          </button>
-        )}
+        {detail?.message && <p>{detail.message}</p>}
+        {detail?.persistenceDegraded && <p role="alert">Keep this page open and copy the hash now. Browser storage could not retain it reliably; do not reload or submit again.</p>}
+        {hash && <div className="transaction-hash">
+          <span>Transaction hash · Studionet</span>
+          <code>{hash}</code>
+          <div className="transaction-actions">
+            <button type="button" className="btn btn-secondary" onClick={async () => {
+              try { await navigator.clipboard.writeText(hash); setCopyStatus('Hash copied.'); }
+              catch { setCopyStatus('Copy unavailable. Select and copy the full hash above.'); }
+            }}>Copy hash</button>
+            <a href={`${STUDIONET_EXPLORER}/tx/${hash}`} target="_blank" rel="noreferrer noopener">View transaction ↗</a>
+          </div>
+          <span role="status">{copyStatus}</span>
+        </div>}
+        <ol className="transaction-phases" aria-label="Transaction lifecycle">
+          {PHASES.map((phase) => <li key={phase} aria-current={phase === step ? 'step' : undefined}>
+            {COPY[phase][0]}
+          </li>)}
+        </ol>
+        {!isPending && <button type="button" className="btn btn-primary" onClick={onClose}>
+          {step === 'RECONCILIATION_REQUIRED' ? 'Review recovery options' : 'Close'}
+        </button>}
       </div>
-    </div>
+    </div>, document.body,
   );
 };

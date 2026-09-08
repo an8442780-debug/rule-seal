@@ -160,7 +160,7 @@ def _valid_assessment(value: dict) -> bool:
     return True
 
 
-class RegulatoryEditionApplicabilityLock(gl.Contract):
+class RuleSealContract(gl.Contract):
     cases: TreeMap[str, str]
     case_by_fingerprint: TreeMap[str, str]
     case_by_nonce: TreeMap[str, str]
