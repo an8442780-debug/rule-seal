@@ -372,13 +372,31 @@ export class ContractService {
     }
     const targetAddress = configuredAddress as `0x${string}`;
 
-    const walletState = walletService.getState();
-    if (!walletState.connected || !walletState.provider || !walletState.address) {
+    const initialWalletState = walletService.getWalletState();
+    if (!initialWalletState.connected || !initialWalletState.provider || !initialWalletState.address) {
       throw new Error('WALLET_NOT_CONNECTED');
     }
 
-    if (!walletState.isCorrectChain) {
+    if (!initialWalletState.isCorrectChain) {
       await walletService.switchChain();
+    }
+
+    // Reacquire exactly once after any awaited chain transition. Everything
+    // below is synchronous until the selected provider receives the write, so
+    // the journal reservation and client share this immutable identity.
+    const currentWalletState = walletService.getWalletState();
+    const writeBinding = currentWalletState.writeClientBinding;
+    if (
+      currentWalletState.phase !== 'CONNECTED' ||
+      !currentWalletState.connected ||
+      !currentWalletState.isCorrectChain ||
+      !currentWalletState.provider ||
+      !currentWalletState.address ||
+      !writeBinding ||
+      writeBinding.provider !== currentWalletState.provider ||
+      writeBinding.address.toLowerCase() !== currentWalletState.address.toLowerCase()
+    ) {
+      throw new Error('WALLET_WRITE_BINDING_UNAVAILABLE');
     }
 
     const opId = `op-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -388,7 +406,7 @@ export class ContractService {
       timestamp: Date.now(),
       params,
       status: 'PRE_SIGN',
-      sender: walletState.address,
+      sender: writeBinding.address,
       chainId: STUDIONET_CONFIG.chainId,
       contractAddress: targetAddress,
     };
@@ -401,8 +419,8 @@ export class ContractService {
       // Blocker 1: Must pass selected EIP-1193 provider directly
       const client = this.createWriteClient({
         endpoint: STUDIONET_CONFIG.rpcUrl,
-        account: walletState.address as `0x${string}`,
-        provider: walletState.provider,
+        account: writeBinding.address as `0x${string}`,
+        provider: writeBinding.provider,
       });
 
       txHash = await client.writeContract({
@@ -452,7 +470,7 @@ export class ContractService {
     }
 
     onStepChange?.('VERIFYING_READBACK', { txHash, persistenceDegraded });
-    return { txHash, opId, sender: walletState.address };
+    return { txHash, opId, sender: writeBinding.address };
   }
 
   public async waitForFinalizedTransaction(

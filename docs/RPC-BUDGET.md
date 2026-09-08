@@ -13,7 +13,9 @@ STUDIO_CAPABILITY_PROBE_STATUS: COMPLETE
 STUDIO_MEASUREMENT_MODE: OBSERVABLE_ACTION_LEDGER
 STUDIO_MEASUREMENT_TIMING: PRE_E2E
 STUDIO_CAPABILITY_PROBE_AT: 2026-09-08T19:01:07.931Z
+STUDIO_FIRST_OBSERVABLE_UI_ACTION_AT: 2026-09-08T19:01:26.817Z
 STUDIO_FIRST_ACTION_AT: NOT_STARTED
+STUDIO_ACCEPTANCE_DEPLOYMENT_AT: NOT_STARTED
 STUDIO_E2E_STARTED_AT: NOT_STARTED
 STUDIO_CAPABILITY_TOOL_OR_API: Codex in-app Browser browser.capabilities.list() and supported browser/tab API inventory
 STUDIO_CAPABILITY_CHECK: Checked for physical request events, performance/request logs, proxy logs, or another exact per-request counter
@@ -22,7 +24,7 @@ STUDIO_PHYSICAL_COUNT_SOURCE: NOT_APPLICABLE
 STUDIO_PHYSICAL_COUNT_CLAIM: NONE
 STUDIO_REPLAY_FOR_MEASUREMENT: NO
 
-The probe completed before the Codex in-app Browser opened Studio at `2026-09-08T19:01:26.817Z`. Read-only account discovery at `2026-09-08T19:01:33.464Z` found `0x15872d1887b8ff7322F2aa7c3c535f1F00dbb452` at `0 GEN`. The user then operated the faucet; primary-AI readback showed `1,000,000 GEN`. That setup is disclosed but is not an AI acceptance transaction. `STUDIO_FIRST_ACTION_AT` means the first governance-eligible acceptance deployment/E2E action and remains `NOT_STARTED` at PRE_DEPLOY.
+The probe completed before the first observable UI action: opening Studio in the Codex in-app Browser at `2026-09-08T19:01:26.817Z`. Read-only account discovery at `2026-09-08T19:01:33.464Z` found `0x15872d1887b8ff7322F2aa7c3c535f1F00dbb452` at `0 GEN`. The user then operated the faucet; primary-AI readback showed `1,000,000 GEN`. Those setup actions are disclosed but are not acceptance transactions. The canonical `STUDIO_FIRST_ACTION_AT` field denotes the first acceptance deployment/E2E action and, as required by the official PreDeploy audit, remains `NOT_STARTED`; acceptance deployment/E2E counters remain zero.
 
 ## STUDIO RPC BUDGET MATRIX
 

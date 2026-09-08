@@ -22,8 +22,10 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
   const hash = `0x${'c'.repeat(64)}`;
   const sender = `0x${'2'.repeat(40)}`;
   function setupWrite(submit = vi.fn().mockResolvedValue(hash)) {
-    vi.spyOn(walletService, 'getState').mockReturnValue({ connected: true, address: sender, chainId: 61999,
-      provider: { request: vi.fn() }, providerName: 'OKX Wallet', isCorrectChain: true });
+    const provider = { request: vi.fn() };
+    vi.spyOn(walletService, 'getWalletState').mockReturnValue({ phase: 'CONNECTED', connected: true,
+      address: sender, chainId: 61999, provider, providerName: 'OKX Wallet', isCorrectChain: true,
+      error: null, writeClientBinding: { provider, address: sender } });
     vi.spyOn(contractService, 'getConfiguredContractAddress').mockReturnValue(`0x${'3'.repeat(40)}`);
     vi.spyOn(contractService, 'createWriteClient').mockReturnValue({ writeContract: submit } as any);
     vi.spyOn(sharedRpc, 'getTransactionOutcome').mockResolvedValue({ transaction: {}, status: 'FINALIZED', execution: 'FINISHED_WITH_RETURN' });
@@ -38,7 +40,12 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
     const phases: TxStep[] = [];
     await create((step) => {
       phases.push(step);
-      if (step === 'SUBMITTED') vi.mocked(walletService.getState).mockReturnValue({ ...walletService.getState(), address: `0x${'4'.repeat(40)}` });
+      if (step === 'SUBMITTED') {
+        const current = walletService.getWalletState();
+        vi.mocked(walletService.getWalletState).mockReturnValue({ ...current,
+          address: `0x${'4'.repeat(40)}`,
+          writeClientBinding: { provider: current.provider, address: `0x${'4'.repeat(40)}` } });
+      }
     });
     expect(phases).toEqual(['WAITING_FOR_WALLET', 'SUBMITTED', 'WAITING_FOR_FINALITY', 'VERIFYING_EXECUTION', 'VERIFYING_READBACK', 'SUCCESS']);
     expect(contractService.getCaseByNonce).toHaveBeenCalledWith(sender, 'nonce', true);
@@ -247,14 +254,17 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
     const mockProvider = { request: vi.fn(), on: vi.fn(), removeListener: vi.fn() };
     const mockAddress = '0x2222222222222222222222222222222222222222';
 
-    vi.spyOn(walletService, 'getState').mockReturnValue({
+    vi.spyOn(walletService, 'getWalletState').mockReturnValue({
+      phase: 'CONNECTED',
       connected: true,
       address: mockAddress,
       chainId: 61999,
       provider: mockProvider as any,
       providerName: 'OKX Wallet',
       isCorrectChain: true,
-    });
+      error: null,
+      writeClientBinding: { provider: mockProvider, address: mockAddress },
+    } as any);
 
     const transactionHash = `0x${'a'.repeat(64)}`;
     const mockWriteContract = vi.fn().mockResolvedValue(transactionHash);
@@ -291,6 +301,25 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
     );
     expect(res.txHash).toBe(transactionHash);
     expect(res.caseId).toBe('REAL-000001');
+  });
+
+  it('aborts before journal or write when account removal occurs during chain switching', async () => {
+    const staleProvider = { request: vi.fn() };
+    const staleAddress = `0x${'5'.repeat(40)}`;
+    vi.spyOn(walletService, 'getWalletState')
+      .mockReturnValueOnce({ phase: 'WRONG_CHAIN', connected: true, address: staleAddress,
+        chainId: 1, provider: staleProvider, providerName: 'OKX Wallet', isCorrectChain: false,
+        error: null, writeClientBinding: null } as any)
+      .mockReturnValue({ phase: 'DISCONNECTED', connected: false, address: null,
+        chainId: null, provider: null, providerName: null, isCorrectChain: false,
+        error: null, writeClientBinding: null } as any);
+    vi.spyOn(walletService, 'switchChain').mockResolvedValue();
+    vi.spyOn(contractService, 'getConfiguredContractAddress').mockReturnValue(`0x${'3'.repeat(40)}`);
+    const createClientSpy = vi.spyOn(contractService, 'createWriteClient');
+
+    await expect(create()).rejects.toThrow('WALLET_WRITE_BINDING_UNAVAILABLE');
+    expect(createClientSpy).not.toHaveBeenCalled();
+    expect(journalService.getPendingOperations()).toEqual([]);
   });
 
   it('treats ACCEPTED receipt status as pending and waits until FINALIZED', async () => {

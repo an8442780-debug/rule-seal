@@ -19,7 +19,7 @@ npm run build
 
 Contract suite: 26 cases, including three successor outcomes. Six existing unused downstream-web-mock warnings remain disclosed. Record final reruns with exact file hashes; do not treat test counts as complete coverage.
 
-Frontend suite: 5 test files / 97 tests passed after the transaction-journal, identity-bound readback, complete wallet-discovery cardinality/session-event coverage and modal-progress repairs. TypeScript and the Vite production build pass; the approximately 801 kB bundle warning remains documented and is not treated as a functional pass.
+Frontend suite: 5 test files / 98 tests passed after the transaction-journal, post-chain-switch identity-bound write/readback, complete wallet-discovery cardinality/session-event coverage and modal-progress repairs. TypeScript and the Vite production build pass; the approximately 801 kB bundle warning remains documented and is not treated as a functional pass.
 
 [Official testing documentation](https://docs.genlayer.com/developers/intelligent-contracts/testing), checked 2026-09-09, distinguishes in-process Direct Mode from network integration.
 
