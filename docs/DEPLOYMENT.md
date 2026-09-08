@@ -11,7 +11,7 @@
 - Contract address: `0x9D5ABdD0e8C606e16f45727066622c5C4a5601E2` (observed from Studionet deployment receipt; POST_DEPLOY acceptance pending)
 - Deployment transaction: `0x7185f66549c5c0e474907226614a5860fc43ddb513764967416f8420eeef59ed` (observed; semantic acceptance pending)
 - Explorer: `https://explorer-studio.genlayer.com/tx/0x7185f66549c5c0e474907226614a5860fc43ddb513764967416f8420eeef59ed`
-- Source commit and SHA-256: source hash `2AEA0BBA3BF62EB052CD677A7007A1D40C57EB3F6E71585EC44C7B2E5DF8DF4E` matches `gen_getContractCode` bytes; exact source commit binding remains pending
+- Deployed source commit and SHA-256: commit `1ab01447771d194fd771bcd3d82a1135123f7ab0`, hash `2AEA0BBA3BF62EB052CD677A7007A1D40C57EB3F6E71585EC44C7B2E5DF8DF4E`; `gen_getContractCode` bytes match
 - Deployment status: `FINALIZED` observed via `gen_getTransactionStatus`; EVM receipt `status=0x1`; semantic GenLayer execution and upgrader readback not yet verified
 - Read-only deployment readback: `get_upgrader()` matched the selected account; initial `get_case_count()`, `get_integration_count()`, and `get_event_count()` each returned `0`
 - User-selected Studio deployer/upgrader account: `0x5Be59b33326772376a01e96e525D6D18FC821113` (selection record only; control, balance and network remain unverified until Studio)
