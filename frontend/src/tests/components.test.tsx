@@ -190,6 +190,17 @@ describe('Mounted Page Components & User Workflows', () => {
     expect(document.body.textContent).toContain('MetaMask');
     expect(document.body.textContent).toContain('OKX Wallet');
     expect(document.activeElement?.textContent).toContain('MetaMask');
+    const metamaskButton = document.querySelector('[aria-label="Connect with MetaMask"]')!;
+    expect(metamaskButton.querySelector('img')?.getAttribute('src')).toBe('/wallets/metamask.svg');
+    expect(document.querySelector('[aria-label="Connect with OKX Wallet"] img')?.getAttribute('src')).toBe('/wallets/okx.png');
+    expect(mockSelect).not.toHaveBeenCalled();
+    providers.forEach(p => expect(p.provider.request).not.toHaveBeenCalled());
+    const icon = metamaskButton.querySelector('img')!;
+    icon.setAttribute('src', 'data:image/png,broken');
+    await act(async () => { icon.dispatchEvent(new Event('error')); });
+    expect(icon.getAttribute('src')).toBe('/wallets/metamask.svg');
+    await act(async () => { metamaskButton.dispatchEvent(new MouseEvent('click', {bubbles: true})); });
+    expect(mockSelect).toHaveBeenCalledExactlyOnceWith(providers[0]);
   });
 
   it('renders PublicLookup and executes lookup by case ID', async () => {

@@ -20,11 +20,13 @@ npm run build
 
 Contract suite baseline: 26 cases, including three successor outcomes. Six existing unused downstream-web-mock warnings remain disclosed. Final rerun results are recorded with the post-deployment evidence revision.
 
-Frontend suite: 5 test files / 98 tests passed after the transaction-journal, post-chain-switch identity-bound write/readback, complete wallet-discovery cardinality/session-event coverage and modal-progress repairs. TypeScript and the Vite production build pass; the approximately 801 kB bundle warning remains documented and is not treated as a functional pass.
+Frontend suite: 5 test files / 104 tests passed after the transaction-journal, post-chain-switch identity-bound write/readback, complete wallet-discovery cardinality/session-event coverage, modal-progress repairs, and the Vercel E2E wallet-cardinality correction. TypeScript and the Vite production build pass; the approximately 801 kB bundle warning remains documented and is not treated as a functional pass.
 
 The production build was also rerun with `VITE_CONTRACT_ADDRESS=0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb`; the generated bundle contains that exact acceptance binding. `frontend/.env.example` records the same public, non-secret value for reproducible configuration.
 
 Primary-AI browser QA used that bound production build in the Codex in-app Browser. At the default `910x698` viewport, all six workflow tabs selected their intended panel without a runtime alert; `End` moved both selection and focus from the first tab to Auditor Hub. At `360x800`, the page remained within the viewport while the workflow tabs and audit table used their own horizontal scroll regions. Auditor readback returned four cases, one integration and fourteen events. Its topic options now match the contract's emitted event names exactly, the filter is explicitly scoped to the current page, and event badges are neutral rather than misusing a case-outcome color.
+
+The Vercel E2E repair was reproduced in Chrome: an OKX-only browser incorrectly rendered an additional MetaMask row with a generic `M` icon. The corrected local production build rendered exactly one OKX option with its brand image at mobile, tablet and desktop sizes, with no page-width overflow. Automated coverage proves that an OKX provider carrying the compatibility `isMetaMask` flag cannot create or rebind a MetaMask option; a real MetaMask EIP-6963 announcement remains independently selectable.
 
 [Official testing documentation](https://docs.genlayer.com/developers/intelligent-contracts/testing), checked 2026-09-09, distinguishes in-process Direct Mode from network integration.
 

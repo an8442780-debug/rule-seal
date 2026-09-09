@@ -2,6 +2,78 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { getWalletState, selectWalletView, walletService } from '../services/walletService.ts';
 
 describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
+  it('does not invent MetaMask from an OKX compatibility provider', () => {
+    const cleanup = walletService.initEIP6963();
+    const request = vi.fn();
+    const provider = { request, isMetaMask: true };
+    (window as any).ethereum = provider;
+    window.dispatchEvent(new CustomEvent('eip6963:announceProvider', { detail: {
+      info: { uuid: 'actual-okx', name: 'OKX Wallet', icon: '', rdns: 'com.okex.wallet' }, provider,
+    }}));
+    expect(walletService.getDiscoveredProviders().map(p => p.info.rdns)).toEqual(['com.okex.wallet']);
+    expect(request).not.toHaveBeenCalled();
+    cleanup();
+  });
+
+  it('hides a flag-only MetaMask alias even when it is a separate router object', () => {
+    (window as any).ethereum = { request: vi.fn(), isMetaMask: true };
+    expect(walletService.getDiscoveredProviders()).toEqual([]);
+  });
+
+  it('keeps real MetaMask announced independently of the OKX compatibility alias', () => {
+    const cleanup = walletService.initEIP6963();
+    (window as any).ethereum = {request: vi.fn(), isMetaMask: true};
+    const providers = [{request: vi.fn()}, {request: vi.fn()}];
+    ['io.metamask', 'com.okex.wallet'].forEach((rdns, i) => {
+      window.dispatchEvent(new CustomEvent('eip6963:announceProvider', {detail: {
+        info: {uuid: `real-${i}`, rdns, name: 'untrusted name', icon: 'https://invalid.example/icon'}, provider: providers[i],
+      }}));
+    });
+    const options = walletService.getDiscoveredProviders();
+    expect(options.map(p => p.info.name)).toEqual(['MetaMask', 'OKX Wallet']);
+    expect(options.map(p => p.info.icon)).toEqual(['/wallets/metamask.svg', '/wallets/okx.png']);
+    expect(options.map(p => p.provider)).toEqual(providers);
+    providers.forEach(p => expect(p.request).not.toHaveBeenCalled());
+    cleanup();
+  });
+
+  it('does not rebind an announced UUID or provider to a different wallet', () => {
+    const cleanup = walletService.initEIP6963();
+    const original = {request: vi.fn()};
+    const replacement = {request: vi.fn()};
+    const announce = (uuid: string, rdns: string, provider: any) => window.dispatchEvent(
+      new CustomEvent('eip6963:announceProvider', {detail: {
+        info: {uuid, rdns, name: rdns, icon: ''}, provider,
+      }}));
+    announce('stable', 'com.okex.wallet', original);
+    announce('stable', 'io.metamask', replacement);
+    announce('changed-brand', 'io.metamask', original);
+    announce('same-brand', 'com.okex.wallet', replacement);
+    expect(walletService.getDiscoveredProviders()).toHaveLength(1);
+    expect(walletService.getDiscoveredProviders()[0].provider).toBe(original);
+    expect(walletService.getDiscoveredProviders()[0].info.name).toBe('OKX Wallet');
+    cleanup();
+  });
+
+  it('deduplicates legacy provider aliases and supplies a branded icon', () => {
+    const provider = { request: vi.fn(), isOkxWallet: true, isMetaMask: true };
+    (window as any).ethereum = provider;
+    (window as any).okxwallet = provider;
+    const options = walletService.getDiscoveredProviders();
+    expect(options).toHaveLength(1);
+    expect(options[0].info.name).toBe('OKX Wallet');
+    expect(options[0].info.icon).toBe('/wallets/okx.png');
+  });
+
+  it('rejects malformed rdns without crashing discovery', () => {
+    const cleanup = walletService.initEIP6963();
+    expect(() => window.dispatchEvent(new CustomEvent('eip6963:announceProvider', {detail: {
+      info: {uuid: 'bad-rdns', name: 'Invalid', rdns: 12}, provider: {request: vi.fn()},
+    }}))).not.toThrow();
+    expect(walletService.getDiscoveredProviders()).toEqual([]);
+    cleanup();
+  });
+
   beforeEach(() => {
     walletService.disconnect();
     walletService.clearDiscoveredProviders();

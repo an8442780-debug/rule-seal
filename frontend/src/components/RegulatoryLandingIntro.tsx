@@ -85,6 +85,7 @@ export const RegulatoryLandingIntro: React.FC = () => {
             <strong> Auditor Hub</strong> shows recorded events and counts; an event is not a substitute for the current case record.
           </p>
           <h3>Create and assess your case</h3>
+          <p>Only detected wallets appear in the picker. If your wallet is missing, unlock and update its extension, then reload this page. MetaMask must support wallet discovery; compatibility aliases from other extensions are not listed as MetaMask.</p>
           <ol>
             <li>Select <strong>Connect Wallet</strong>, then explicitly choose a detected MetaMask, OKX Wallet or Rabby. Writes require the correct Studionet network and spendable GEN. Never provide a seed phrase or private key to this page.</li>
             <li>Open <strong>Case Creator &amp; Lifecycle</strong>. Enter the activity date and retain the client nonce, then choose <strong>Create Draft Case</strong> and sign. Record the case ID returned after verification. A new nonce cannot bypass duplicate case inputs.</li>

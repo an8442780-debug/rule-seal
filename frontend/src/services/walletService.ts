@@ -19,7 +19,15 @@ export const selectWalletView = (state: WalletSessionState) => ({
   showConnect: state.phase !== 'CONNECTED' && state.phase !== 'WRONG_CHAIN',
 });
 
-const STRICT_RDNS_ALLOWLIST = ['io.metamask', 'com.okex.wallet', 'io.rabby'];
+export const WALLET_BRANDS: Record<string, { name: string; icon: string }> = {
+  'io.metamask': { name: 'MetaMask', icon: '/wallets/metamask.svg' },
+  'com.okex.wallet': { name: 'OKX Wallet', icon: '/wallets/okx.png' },
+  'com.okx.wallet': { name: 'OKX Wallet', icon: '/wallets/okx.png' },
+  'io.rabby': { name: 'Rabby', icon: '/wallets/rabby.svg' },
+};
+
+const canonicalRdns = (rdns: string) => rdns.toLowerCase() === 'com.okx.wallet'
+  ? 'com.okex.wallet' : rdns.toLowerCase();
 
 export class WalletService {
   private static instance: WalletService;
@@ -61,26 +69,29 @@ export class WalletService {
       if (!event.detail || !event.detail.info || !event.detail.provider) return;
       const { info, provider } = event.detail;
 
-      const rdns = (info.rdns || '').toLowerCase();
       if (
         typeof info.uuid !== 'string' || !info.uuid ||
         typeof info.name !== 'string' || !info.name ||
         typeof info.rdns !== 'string' ||
         typeof provider.request !== 'function'
       ) return;
-
-      // Strict RDNS allowlist check
-      if (!STRICT_RDNS_ALLOWLIST.includes(rdns)) return;
-
-
-      // Deduplicate by UUID and provider identity
-      const existingKey = Array.from(this.announcedProviders.keys()).find((k) => {
-        const entry = this.announcedProviders.get(k);
-        return entry && (entry.provider === provider || entry.info.uuid === info.uuid);
-      });
-
-      const key = existingKey || info.uuid || `${info.name}:${info.rdns}`;
-      this.announcedProviders.set(key, { info, provider });
+      const rdns = canonicalRdns(info.rdns);
+      const brand = Object.hasOwn(WALLET_BRANDS, rdns) ? WALLET_BRANDS[rdns] : undefined;
+      if (!brand) return;
+      const entries = Array.from(this.announcedProviders.values());
+      // Conflicting UUID/object identities must not replace an existing option.
+      if (entries.some(entry =>
+        (entry.info.uuid === info.uuid && entry.provider !== provider) ||
+        (entry.provider === provider && entry.info.rdns !== rdns) ||
+        (entry.info.rdns === rdns && entry.provider !== provider)
+      )) return;
+      const existing = entries.find(entry => entry.provider === provider);
+      const key = existing?.info.uuid || info.uuid;
+      this.announcedProviders.set(key, { info: {
+        uuid: key, rdns, name: brand.name,
+        icon: typeof info.icon === 'string' && /^data:image\/(png|svg\+xml|webp|jpeg)[;,]/i.test(info.icon)
+          ? info.icon : brand.icon,
+      }, provider });
       this.notifyListeners();
     };
 
@@ -97,21 +108,25 @@ export class WalletService {
     if (typeof window === 'undefined') return list;
     // EIP-6963 announcements replace only the same legacy wallet; other detected
     // wallets remain selectable. Ambiguous flags fail closed.
-    const candidates = [
-      ...(((window as any).ethereum?.providers ?? []) as any[]),
+    const injected = (window as any).ethereum;
+    const candidates = [...new Set([
+      ...(Array.isArray(injected?.providers) ? injected.providers : []),
       (window as any).ethereum,
       (window as any).okxwallet,
-    ].filter((provider) => provider && typeof provider.request === 'function');
-    const legacy = candidates.flatMap((provider) => {
-      const ids = [provider.isMetaMask === true ? ['MetaMask', 'io.metamask'] : [],
+    ].filter((provider) => provider && typeof provider.request === 'function'))];
+    for (const provider of candidates) {
+      if (list.some(entry => entry.provider === provider)) continue;
+      // isMetaMask is a compatibility flag also set by non-MetaMask wallets.
+      // MetaMask therefore requires its own EIP-6963 announcement.
+      const ids = [
         provider.isOkxWallet === true || provider.isOKExWallet === true ? ['OKX Wallet', 'com.okex.wallet'] : [],
         provider.isRabby === true ? ['Rabby', 'io.rabby'] : []].filter((entry) => entry.length);
-      if (ids.length !== 1) return [];
+      if (ids.length !== 1) continue;
       const [name, rdns] = ids[0];
-      if (list.some((item) => item.info.rdns.toLowerCase() === rdns)) return [];
-      return [{ info: { uuid: `legacy-${rdns}`, name, icon: '', rdns }, provider }];
-    });
-    return [...list, ...legacy];
+      if (list.some((item) => item.info.rdns === rdns)) continue;
+      list.push({ info: { uuid: `legacy-${rdns}`, name, icon: WALLET_BRANDS[rdns].icon, rdns }, provider });
+    }
+    return list;
   }
 
   public getState(): WalletState {

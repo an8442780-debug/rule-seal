@@ -360,9 +360,9 @@ export const CaseDetailView: React.FC<CaseDetailViewProps> = ({
 
       {/* Auditor Disclaimer */}
       <footer className="auditor-disclaimer">
-        <strong>Auditor Notice:</strong> This record reflects an immutable, source-bound incorporation-by-reference edition
-        applicability lock verified across official eCFR and Federal Register records. It functions as an objective evidence-navigation
-        baseline for downstream compliance workflows and does not constitute formal legal advice or regulatory certification.
+        <strong>Auditor Notice:</strong> Read the current case state and assessment before relying on this record.
+        A draft or frozen case has no conclusive assessment. Source links alone do not establish applicability.
+        RuleSeal provides evidence navigation, not legal advice or regulatory certification.
       </footer>
     </article>
   );

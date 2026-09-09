@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { EIP6963ProviderDetail } from '../types/domain.ts';
+import { WALLET_BRANDS } from '../services/walletService.ts';
 
 interface WalletModalProps {
   isOpen: boolean;
@@ -109,7 +110,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         </div>
 
         <p style={{ fontSize: '13px', color: 'var(--rs-text-muted)', marginBottom: '18px', lineHeight: 1.5 }}>
-          Connect via an EIP-6963 multi-injected provider to sign transactions on GenLayer Studionet. Supported wallets include MetaMask, OKX Wallet, and Rabby.
+          Choose a wallet detected in this browser. RuleSeal supports MetaMask, OKX Wallet and Rabby on GenLayer Studionet. You approve connection and signing in your wallet.
         </p>
 
         <div>
@@ -132,41 +133,24 @@ export const WalletModal: React.FC<WalletModalProps> = ({
                 aria-label={`Connect with ${p.info.name}`}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  {p.info.icon ? (
                     <img
-                      src={p.info.icon}
+                      src={p.info.icon || WALLET_BRANDS[p.info.rdns]?.icon}
+                      width={28}
+                      height={28}
+                      onError={(event) => {
+                        const fallback = WALLET_BRANDS[p.info.rdns]?.icon;
+                        if (fallback && event.currentTarget.getAttribute('src') !== fallback) {
+                          event.currentTarget.src = fallback;
+                        }
+                      }}
                       alt=""
                       aria-hidden="true"
                       style={{ width: '28px', height: '28px', borderRadius: '6px', flexShrink: 0 }}
                     />
-                  ) : (
-                    <div
-                      aria-hidden="true"
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        backgroundColor: 'var(--rs-border)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        color: 'var(--rs-text-muted)',
-                      }}
-                    >
-                      {p.info.name.slice(0, 1)}
-                    </div>
-                  )}
                   <div>
                     <span style={{ fontWeight: 700, fontSize: '14.5px', color: 'var(--rs-text-heading)', display: 'block' }}>
                       {p.info.name}
                     </span>
-                    {p.info.rdns && (
-                      <span className="mono" style={{ fontSize: '11px', color: 'var(--rs-text-subtle)' }}>
-                        {p.info.rdns}
-                      </span>
-                    )}
                   </div>
                 </div>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--rs-cyan-bright)' }}>

@@ -77,5 +77,6 @@ Browser journals are local metadata, not canonical state. Studionet state/accoun
 
 - Official-source URLs and stored document identities are derived and validated by the contract; model-proposed identifiers are not trusted.
 - The wallet chooser passively discovers only allowlisted MetaMask, OKX Wallet and Rabby providers and requests accounts only after an explicit provider choice.
+- MetaMask requires its own EIP-6963 announcement: another wallet's `isMetaMask` compatibility flag does not create a MetaMask option. Identified, unambiguous OKX/Rabby legacy providers remain supported. Options are deduplicated and retain their exact provider object. Missing or failed provider icons use local official brand images.
 - Storage failure blocks writes; pending records cannot be manually deleted before receipt reconciliation and authoritative readback.
 - The Root Slot upgrader is privileged. A source-changing upgrade requires separate review, source/layout verification and state-preservation evidence.
