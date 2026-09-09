@@ -74,7 +74,9 @@ export const RegulatoryLandingIntro: React.FC = () => {
         <summary>How it works — inputs, workflows and results</summary>
         <div className="how-it-works-body">
           <p>
-            Start with an activity date from 2000-01-01 through 2035-12-31.
+            Choose the date of the activity you want to assess, from 2000-01-01 through 2035-12-31.
+            This can be a past activity for a historical review or a planned future activity; it is not the date you create the case.
+            An accepted date does not guarantee that official source evidence is available or sufficient for a resolved assessment.
             RuleSeal covers only Title 14, Part 71, section 71.1 and FAA Order JO 7400.11.
             You do not upload a preferred edition or choose the authority documents: the contract retrieves official sources.
           </p>
