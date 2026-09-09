@@ -40,7 +40,7 @@ Consensus rejection is not a stored UNRESOLVED outcome. Read actual state before
 
 ## Upgrade and authority loss
 
-Root Slot authorization does not prove storage compatibility. Review the exact replacement source and layout before any upgrade. RuleSeal rehearsed the approved source against its acceptance contract only after meaningful case, lineage and integration state existed, then verified finality, semantic upgrade success, exact source parity, unchanged authority and before/after state readbacks. A future source-changing upgrade requires a fresh scoped review and cannot inherit that rehearsal.
+Root Slot authorization does not prove storage compatibility. Review the exact replacement source and layout before any upgrade. RuleSeal rehearsed the approved source against its acceptance contract only after meaningful case, lineage and integration state existed, then verified finality, semantic upgrade success, exact source parity, unchanged authority and before/after state readbacks. A future source-changing upgrade requires fresh source, compatibility and state-preservation verification.
 
 RuleSeal is independent and migrates no old state. Never modify the original project's deployment/release.
 

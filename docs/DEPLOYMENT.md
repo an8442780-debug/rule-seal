@@ -18,7 +18,7 @@
 - Deployment receipt: `FINALIZED`, GenVM `SUCCESS`, consensus `Accepted` / RPC `MAJORITY_AGREE`, five initial validators.
 - Initial authoritative readbacks: upgrader equals the locked account; case, integration and event counts were zero.
 
-The deployment was submitted once, after `ANONYMOUS REVIEW APPROVED - PRE_DEPLOY`, in Normal (Full Consensus) mode through the Codex in-app Studio. The raw RPC deployment payload was decoded and hashed without newline normalization; it exactly matches the reviewed LF Git blob.
+The deployment was submitted once in Normal (Full Consensus) mode through GenLayer Studio. The raw RPC deployment payload was decoded and hashed without newline normalization; it exactly matches the reviewed LF Git blob.
 
 RuleSeal uses a new contract and storage identity. It does not reuse the predecessor contract address, state, deployment transaction, runtime records or live evidence.
 
