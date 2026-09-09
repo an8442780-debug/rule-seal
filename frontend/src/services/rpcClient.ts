@@ -6,6 +6,8 @@ interface CacheEntry {
   expiresAt: number;
 }
 
+export const RPC_EVIDENCE_KEY = `rule-seal.rpc-evidence.v1:${STUDIONET_CONFIG.chainId}:${CONTRACT_ADDRESS.toLowerCase() || 'unconfigured'}`;
+
 export class RpcClient {
   private static instance: RpcClient;
   private client: any;
@@ -31,6 +33,7 @@ export class RpcClient {
     const current = this.callCountsByJourney.get(journey) || 0;
     this.callCountsByJourney.set(journey, current + 1);
     this.totalCalls++;
+    this.persistJourneyMetrics();
   }
 
   public getJourneyMetrics(): { total: number; journeys: Record<string, number> } {
@@ -44,6 +47,20 @@ export class RpcClient {
   public resetJourneyMetrics(): void {
     this.callCountsByJourney.clear();
     this.totalCalls = 0;
+    this.persistJourneyMetrics();
+  }
+
+  private persistJourneyMetrics(): void {
+    try {
+      localStorage.setItem(RPC_EVIDENCE_KEY, JSON.stringify({
+        mode: 'logical-client-calls',
+        origin: location.origin,
+        updatedAt: new Date().toISOString(),
+        ...this.getJourneyMetrics(),
+      }));
+    } catch {
+      // Local evidence must never break product reads.
+    }
   }
 
   public clearCache(): void {

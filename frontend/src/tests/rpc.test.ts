@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { sharedRpc } from '../services/rpcClient.ts';
+import { RPC_EVIDENCE_KEY, sharedRpc } from '../services/rpcClient.ts';
 
 const MOCK_ADDR = '0x1111111111111111111111111111111111111111';
 
@@ -48,6 +48,9 @@ describe('RpcClient', () => {
     const metrics = sharedRpc.getJourneyMetrics();
     expect(metrics.total).toBe(2);
     expect(metrics.journeys['public_lookup']).toBe(2);
+    expect(JSON.parse(localStorage.getItem(RPC_EVIDENCE_KEY)!)).toMatchObject({
+      mode: 'logical-client-calls', total: 2, journeys: { public_lookup: 2 },
+    });
   });
 
   it('uses the approved 1s and 3s retry delays', async () => {
