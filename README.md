@@ -6,9 +6,9 @@ RuleSeal freezes an activity date and regulatory reference, then asks independen
 
 ## Development status
 
-RuleSeal has an independent Studionet acceptance deployment and `POST_DEPLOY_TEST` approval. Production release and wallet E2E remain pending. Previous-project transactions and wallet evidence are not RuleSeal evidence.
+RuleSeal has an independent Studionet acceptance deployment, `POST_DEPLOY_TEST` approval and a production web release. Production wallet E2E remains pending. Previous-project transactions and wallet evidence are not RuleSeal evidence.
 
-Verified links: [Studionet contract](https://explorer-studio.genlayer.com/address/0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb) · [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x92dd901676060279683a5628394c6afd9fc99516790376e3ce502ac1467b2106) · [Studio evidence](docs/STUDIONET-EVIDENCE.md)
+Verified links: [Live app](https://rule-seal.vercel.app) · [Studionet contract](https://explorer-studio.genlayer.com/address/0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb) · [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x92dd901676060279683a5628394c6afd9fc99516790376e3ce502ac1467b2106) · [Studio evidence](docs/STUDIONET-EVIDENCE.md)
 
 ## Trust problem
 

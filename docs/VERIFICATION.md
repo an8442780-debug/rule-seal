@@ -2,7 +2,7 @@
 
 ## Release boundary
 
-RuleSeal has an independent Studionet deployment and anonymous `POST_DEPLOY_TEST` approval for exact evidence revision `6dabaf1998e3776b256a17ba89f94beabe344a35`. Production release, final tag, Vercel E2E and `POST_MILESTONE_REVIEW` remain open. Inherited tags and another application's transactions cannot close RuleSeal gates.
+RuleSeal has an independent Studionet deployment and anonymous `POST_DEPLOY_TEST` approval for exact evidence revision `6dabaf1998e3776b256a17ba89f94beabe344a35`. The production app is live at `https://rule-seal.vercel.app`; final tag, wallet Vercel E2E and `POST_MILESTONE_REVIEW` remain open. Inherited tags and another application's transactions cannot close RuleSeal gates.
 
 Candidate canonical LF contract SHA-256: `5A2B820886BB776B5E8C7E1C1FEBC0CA6B4C661F661352B87F100CE04FCD9C0A`. `.gitattributes` enforces LF so the reviewed Git blob, deployable checkout and future RPC code can be compared as raw bytes. The earlier diagnostic CRLF deployment hash `2AEA0BBA3BF62EB052CD677A7007A1D40C57EB3F6E71585EC44C7B2E5DF8DF4E` is not acceptance provenance.
 The acceptance deployment and same-source upgrade both contain exactly those raw LF bytes. Public GitHub revisions are bound by full commit SHA; the final production release will additionally use a RuleSeal-specific annotated tag whose tag-object SHA and commit target are independently recorded after Vercel evidence is complete.
@@ -33,6 +33,15 @@ Primary-AI browser QA used that bound production build in the Codex in-app Brows
 Deployment, exact raw-byte source parity, schema/upgrader readback, LOCKED, UNRESOLVED, minimum/effective date boundaries, duplicate nonce rollback, retry cooldown rollback, reciprocal successor lineage, predecessor supersession, integration advancement, unauthorized actor rejection, validator disagreement rollback and same-source upgrade state preservation have live evidence in `docs/STUDIONET-EVIDENCE.md`.
 
 The live `NOT_APPLICABLE` attempt failed closed with `INVALID_ASSESSMENT` after `MAJORITY_DISAGREE`; state remained FROZEN. It is explicitly not counted as NOT_APPLICABLE evidence. The original minimum-date case proves both one-hour retry boundaries, three total assessments, and a finalized `MAX_RETRIES_EXCEEDED` rollback with unchanged authoritative state.
+
+## Production release verification
+
+- Vercel team/project: `an8442780-debug/rule-seal`; deployment `dpl_AjgS8F2zc1Sz2MCxyxbQ3DMhPnEQ`; status `READY`.
+- Stable production URL: `https://rule-seal.vercel.app` returned HTTP 200; a nonexistent route returned HTTP 404.
+- Public logo returned HTTP 200 as `image/svg+xml` (6,322 bytes).
+- Exact-env local production build and deployed assets match byte-for-byte: JavaScript SHA-256 `677B62BB2D427FF955F3421390F986A20984BA529C6B8CB351364A17E9C4F97D`; CSS SHA-256 `B30ED5B82971F669D2D58F256678F4111AA5DF57997BC030A3E758269E480888`.
+- The deployed bundle contains the exact RuleSeal contract binding and no old project name/logo/slug. The exact-env build is 800.73 kB JavaScript / 193.20 kB gzip; its documented chunk warning is non-blocking.
+- Public wallet journeys and measured frontend RPC counts remain pending until the user authorizes Vercel E2E.
 
 ## Corrected acceptance matrix
 
