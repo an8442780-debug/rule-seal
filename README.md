@@ -63,7 +63,7 @@ npm run build
 npm run dev
 ```
 
-Without `VITE_CONTRACT_ADDRESS` the app is unconfigured. For RuleSeal builds, set it to the verified Studionet address `0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb`. Never place secrets or another project's contract address in the frontend.
+Without `VITE_CONTRACT_ADDRESS` the app is unconfigured. For RuleSeal builds, set it to the verified Studionet address `0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb`. Keep secrets out of frontend configuration.
 
 ## Evidence and limits
 

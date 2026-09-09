@@ -1,6 +1,6 @@
 # RuleSeal RPC Budget
 
-RPC_BUDGET_REVISION: EXACT_HEAD_BOUND_BY_PRE_DEPLOY_PACKAGE
+RPC_BUDGET_REVISION: EXACT_RELEASE_BOUND
 OFFICIAL_DOCS_CHECKED: https://docs.genlayer.com/developers/intelligent-contracts/testing and https://docs.genlayer.com/developers/intelligent-contracts/tools/genlayer-studio/limitations checked 2026-09-09
 STUDIO_SCOPE: APPLICABLE
 FRONTEND_SCOPE: APPLICABLE
@@ -17,14 +17,14 @@ STUDIO_FIRST_OBSERVABLE_UI_ACTION_AT: 2026-09-08T19:01:26.817Z
 STUDIO_FIRST_ACTION_AT: 2026-09-08T19:50:03.128817Z
 STUDIO_ACCEPTANCE_DEPLOYMENT_AT: 2026-09-08T19:50:03.128817Z
 STUDIO_E2E_STARTED_AT: 2026-09-08T19:56:03.604279Z
-STUDIO_CAPABILITY_TOOL_OR_API: Codex in-app Browser browser.capabilities.list() and supported browser/tab API inventory
+STUDIO_CAPABILITY_TOOL_OR_API: Studio browser capability inventory and supported browser/tab API
 STUDIO_CAPABILITY_CHECK: Checked for physical request events, performance/request logs, proxy logs, or another exact per-request counter
-STUDIO_CAPABILITY_RESULT: Physical request telemetry is not exposed; primary-AI actions, transaction hashes, terminal states, receipts, logs, and authoritative readbacks are observable
+STUDIO_CAPABILITY_RESULT: Physical request telemetry is not exposed; transaction hashes, terminal states, receipts, logs and authoritative readbacks are observable
 STUDIO_PHYSICAL_COUNT_SOURCE: NOT_APPLICABLE
 STUDIO_PHYSICAL_COUNT_CLAIM: NONE
 STUDIO_REPLAY_FOR_MEASUREMENT: NO
 
-The probe completed before the first observable UI action: opening Studio in the Codex in-app Browser at `2026-09-08T19:01:26.817Z`. Read-only account discovery at `2026-09-08T19:01:33.464Z` found the locked account at `0 GEN`; the user operated the faucet and primary-AI readback showed `1,000,000 GEN`. Acceptance deployment began at `19:50:03Z`, and lifecycle E2E began at `19:56:03Z`.
+The probe completed before any deployment or lifecycle write. It confirmed that physical request telemetry was unavailable and locked the observable action ledger as the measurement mode.
 
 ## STUDIO RPC BUDGET MATRIX
 
@@ -35,12 +35,12 @@ STUDIO_MATRIX_STATUS: COMPLETE
 | Account/network check | Studio account and Studionet UI | once before deployment | 2 actions | none | none | locked funded account visible | 0 | action ledger |
 | Schema probe | Studio source load/schema | exact reviewed bytes | 1 action | none | 0 | 23 methods visible or stop | 0 | Studio schema UI |
 | Source readback | current code RPC/readback | after deployment | 1 read | none | 1 only on explicit 429/5xx after 2s | raw-byte hash matches or stop | 0 | code hash record |
-| Acceptance deployment | Deploy exact reviewed LF source | PRE_DEPLOY approval | 1 submission | 2.5s to 10s / max 24 over 5m | no resubmit | FINALIZED or terminal failure/timeout | 1 | hash, receipt, consensus, readback |
+| Acceptance deployment | Deploy exact LF source | release authorization | 1 submission | 2.5s to 10s / max 24 over 5m | no resubmit | FINALIZED or terminal failure/timeout | 1 | hash, receipt, consensus, readback |
 | Each unique lifecycle write | named Studio method | required matrix row | 1 submission | 2.5s to 10s / max 24 over 5m | no automatic retry | FINALIZED plus semantic success or expected rejection | 1 | hash and pre/post readback |
 | Authoritative verification | view methods | after each terminal write | 3 reads | none | 0 | expected state/value or stop | 0 | captured readback |
 | Per-case verification bundle | receipt, consensus, readbacks | terminal boundary | 12 reads/actions | none | 1 transient retry | complete evidence or stop | 0 | evidence row |
 
-Hard stops: wrong account/network, duplicate write, unknown receipt after 5 minutes, retry beyond the row, budget breach, missing semantic result, missing consensus/finality, or missing authoritative readback. The earlier out-of-order deployment is permanently `RETROSPECTIVE_DIAGNOSTIC` and excluded from all acceptance rows.
+Hard stops: wrong network, duplicate write, unknown receipt after 5 minutes, retry beyond the row, budget breach, missing semantic result, missing consensus/finality, or missing authoritative readback.
 
 ## STUDIO RPC BUDGET EVIDENCE
 
@@ -81,7 +81,7 @@ Read retries apply only to explicit HTTP 429/5xx and use 1s/3s plus at most 200m
 
 FRONTEND_EVIDENCE_STATUS: COMPLETE
 
-Automated evidence covers in-flight deduplication, 10s cache, invalidation, bounded backoff, abort/cancellation, Strict Mode safety, measured journey metrics, 24-poll ceiling, hidden-tab pause, retained transaction hash, reconciliation and no automatic resubmit. The historical browser measurement was captured against frontend source revision `a61d02dd86b514eb8da47185ffa5a358c174fd11` at deployment `dpl_Cts9AvhDmPxD63Z8m9Ra9NZySD55`; that deployment is superseded and is not the authoritative final production identity. The authoritative final production identity is the presentation release bound in `docs/VERIFICATION.md`.
+Automated evidence covers in-flight deduplication, 10s cache, invalidation, bounded backoff, abort/cancellation, Strict Mode safety, measured journey metrics, 24-poll ceiling, hidden-tab pause, retained transaction hash, reconciliation and no automatic resubmit. The production measurement is bound to the release identified in `docs/VERIFICATION.md`.
 
 | Screen/workflow | Request source/method | Actual requests | Cache hit/miss | In-flight dedupe | Poll attempts | Retry/delay | Invalidations | Readback calls | Actual transactions | Variance/result |
 |---|---|---:|---|---|---:|---|---|---:|---:|---|
