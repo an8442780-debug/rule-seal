@@ -46,11 +46,11 @@ The live `NOT_APPLICABLE` attempt failed closed with `INVALID_ASSESSMENT` after 
 - Stable production root returns HTTP 200 and a nonexistent route returns HTTP 404. Desktop and 375px browser inspection show the redesigned header, briefing, workflow navigation and workbench surfaces with no page-level horizontal overflow.
 - Exact-environment local and deployed assets match byte-for-byte: JavaScript SHA-256 `0F47954199A6A3FD23944861A57CC162A6F7459094E1B3740894FEF921B67A53`; CSS SHA-256 `4A5B7EB37218FD5C68FAFEB08394D9FA8122AC68C185E3C8AA4A9D2A7CE1845F`.
 - The public Explorer logo is an opaque 1024×1024 RGB PNG, 435,535 bytes, rendered from the committed RuleSeal SVG source and available at `https://rule-seal.vercel.app/rule-seal-logo.png`.
-- The previous transaction and readback evidence below remains bound to its tested revision. No transaction was sent or replayed for this presentation-only release.
+- The historical transaction and readback evidence below remains retained for audit context and is explicitly not the authoritative production release. No transaction was sent or replayed for this presentation-only release.
 
-### Transaction-tested release
+### Historical transaction-tested evidence (not the authoritative final production release)
 
-- Vercel team/project: `an8442780-debug/rule-seal`; deployment `dpl_Cts9AvhDmPxD63Z8m9Ra9NZySD55`; status `READY`; exact frontend source revision `a61d02dd86b514eb8da47185ffa5a358c174fd11`.
+- This historical evidence was captured before the authoritative presentation release above: Vercel team/project `an8442780-debug/rule-seal`; deployment `dpl_Cts9AvhDmPxD63Z8m9Ra9NZySD55`; exact frontend source revision `a61d02dd86b514eb8da47185ffa5a358c174fd11`. It is superseded for final production identity and is not used as the final release binding.
 - Stable production URL: `https://rule-seal.vercel.app` returned HTTP 200; a nonexistent route returned HTTP 404.
 - Public logo returned HTTP 200 as `image/svg+xml` (6,322 bytes).
 - Exact-env local production build and deployed assets match byte-for-byte: JavaScript SHA-256 `D16A408572760411BA2F8EC0100B33D2D2BE4BE4C0CC22BBFABDC79231F8B3C5`; CSS SHA-256 `B30ED5B82971F669D2D58F256678F4111AA5DF57997BC030A3E758269E480888`.

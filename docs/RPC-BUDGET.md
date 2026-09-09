@@ -81,7 +81,7 @@ Read retries apply only to explicit HTTP 429/5xx and use 1s/3s plus at most 200m
 
 FRONTEND_EVIDENCE_STATUS: COMPLETE
 
-Automated evidence covers in-flight deduplication, 10s cache, invalidation, bounded backoff, abort/cancellation, Strict Mode safety, measured journey metrics, 24-poll ceiling, hidden-tab pause, retained transaction hash, reconciliation and no automatic resubmit. Chrome profile 4 then measured the exact frontend source revision `a61d02dd86b514eb8da47185ffa5a358c174fd11` at production deployment `dpl_Cts9AvhDmPxD63Z8m9Ra9NZySD55`.
+Automated evidence covers in-flight deduplication, 10s cache, invalidation, bounded backoff, abort/cancellation, Strict Mode safety, measured journey metrics, 24-poll ceiling, hidden-tab pause, retained transaction hash, reconciliation and no automatic resubmit. The historical browser measurement was captured against frontend source revision `a61d02dd86b514eb8da47185ffa5a358c174fd11` at deployment `dpl_Cts9AvhDmPxD63Z8m9Ra9NZySD55`; that deployment is superseded and is not the authoritative final production identity. The authoritative final production identity is the presentation release bound in `docs/VERIFICATION.md`.
 
 | Screen/workflow | Request source/method | Actual requests | Cache hit/miss | In-flight dedupe | Poll attempts | Retry/delay | Invalidations | Readback calls | Actual transactions | Variance/result |
 |---|---|---:|---|---|---:|---|---|---:|---:|---|
