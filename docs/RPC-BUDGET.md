@@ -47,7 +47,7 @@ Hard stops: wrong account/network, duplicate write, unknown receipt after 5 minu
 STUDIO_EVIDENCE_STATUS: COMPLETE
 STUDIO_ACTION_LEDGER_STATUS: COMPLETE
 STUDIO_PHYSICAL_REQUESTS: NOT_APPLICABLE
-STUDIO_ACTIONS: 119
+STUDIO_ACTIONS: 156
 STUDIO_TRANSACTIONS: 25
 STUDIO_TRANSACTION_HASHES: 25 listed in docs/STUDIONET-EVIDENCE.md
 STUDIO_STATUS_POLL_ATTEMPTS: 69
@@ -57,7 +57,7 @@ STUDIO_RETRIES: 0
 STUDIO_DUPLICATE_TRANSACTIONS: 0
 STUDIO_MATRIX_VARIANCE: NOT_APPLICABLE live label not established; one bounded attempt failed closed after three validator rotations; both premature retry attempts were retained as cooldown rollbacks; the two eligible reservations, third assessment, and cap rollback were completed on the original case
 
-These are observable action-ledger counts, not physical network-request counts. `STUDIO_ACTIONS` adds each recorded submission, bounded status observation, terminal receipt inspection, and authoritative readback; it excludes passive rendering and UI navigation. All attempted writes, including semantic errors, are retained. No blind resubmission occurred.
+These are observable action-ledger counts, not physical network-request counts. `STUDIO_ACTIONS` is the auditable aggregate of the four recorded ledgers: `STUDIO_TRANSACTIONS` (25 submissions) + `STUDIO_STATUS_POLL_ATTEMPTS` (69 bounded observations) + `STUDIO_TERMINAL_RECEIPT_READS` (25) + `STUDIO_AUTHORITATIVE_READBACKS` (37) = 156. It excludes passive rendering and UI navigation. All attempted writes, including semantic errors, are retained. No blind resubmission occurred.
 
 ## FRONTEND RPC BUDGET MATRIX
 
