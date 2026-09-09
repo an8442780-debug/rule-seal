@@ -6,7 +6,13 @@ RuleSeal freezes an activity date and regulatory reference, then asks independen
 
 ## Development status
 
-RuleSeal now has an independent Studionet acceptance deployment at `0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb`. Deployment, exact-source parity, lifecycle E2E and same-source upgrade rehearsal are recorded in `docs/STUDIONET-EVIDENCE.md`; anonymous POST_DEPLOY_TEST approval, public repository and production release remain pending. Previous-project transactions and wallet evidence are not RuleSeal evidence.
+RuleSeal has an independent Studionet acceptance deployment and `POST_DEPLOY_TEST` approval. Production release and wallet E2E remain pending. Previous-project transactions and wallet evidence are not RuleSeal evidence.
+
+Verified links: [Studionet contract](https://explorer-studio.genlayer.com/address/0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb) · [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x92dd901676060279683a5628394c6afd9fc99516790376e3ce502ac1467b2106) · [Studio evidence](docs/STUDIONET-EVIDENCE.md)
+
+## Trust problem
+
+An owner, resolver or frontend must not be able to substitute an edition, effective date, official document identity or assessment result. RuleSeal derives bounded official eCFR and Federal Register endpoints inside the contract, has validators refetch them independently, compares every consequential field, and stores the consensus result and evidence fingerprint on-chain.
 
 ## How it works
 
@@ -33,6 +39,10 @@ Integration accepts only LOCKED targets. Rebinding the same caller/trimmed names
 Assessment executes in the Intelligent Contract, not a frontend model or trusted backend. The custom validator independently refetches evidence and compares outcome, edition, dates, fingerprint, reason, authority documents and source statuses. Deterministic state changes follow consensus.
 
 An agreed unavailable-source result may be recorded as UNRESOLVED. Consensus disagreement is different: rejection does not itself establish that state transition. Inspect execution and readback.
+
+## Transaction lifecycle
+
+Writes use only the wallet provider and account explicitly selected after chain validation. The frontend journals the intent before signing, preserves the submitted hash, polls with a bounded backoff until `FINALIZED`, then requires semantic `SUCCESS` and a method-specific authoritative readback before clearing the journal. User rejection, rollback, timeout, unknown execution and failed readback never become optimistic success or automatic resubmission.
 
 ## Architecture and local checks
 
@@ -62,3 +72,10 @@ See [Verification](docs/VERIFICATION.md), [Deployment](docs/DEPLOYMENT.md), [Stu
 Scope is section 71.1, FAA Order JO 7400.11 and activity dates 2000-01-01 through 2035-12-31. There are three total assessments, not three retries after an initial attempt; retry reservation requires a one-hour cooldown. New nonces cannot bypass duplicate fingerprints.
 
 Browser journals are local metadata, not canonical state. Studionet state/account availability is not guaranteed and upgrade authority is privileged. Local PASS does not prove live finality, source parity, wallet E2E, accessibility or release readiness.
+
+## Security boundaries
+
+- Official-source URLs and stored document identities are derived and validated by the contract; model-proposed identifiers are not trusted.
+- The wallet chooser passively discovers only allowlisted MetaMask, OKX Wallet and Rabby providers and requests accounts only after an explicit provider choice.
+- Storage failure blocks writes; pending records cannot be manually deleted before receipt reconciliation and authoritative readback.
+- The Root Slot upgrader is privileged. A source-changing upgrade requires separate review, source/layout verification and state-preservation evidence.

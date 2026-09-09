@@ -2,10 +2,10 @@
 
 ## Release boundary
 
-RuleSeal has an independent Studionet deployment and a completed primary-AI Studio evidence pass. Production release, final tag, Vercel E2E and downstream anonymous approvals remain open. Inherited tags and another application's transactions cannot close RuleSeal gates.
+RuleSeal has an independent Studionet deployment and anonymous `POST_DEPLOY_TEST` approval for exact evidence revision `6dabaf1998e3776b256a17ba89f94beabe344a35`. Production release, final tag, Vercel E2E and `POST_MILESTONE_REVIEW` remain open. Inherited tags and another application's transactions cannot close RuleSeal gates.
 
 Candidate canonical LF contract SHA-256: `5A2B820886BB776B5E8C7E1C1FEBC0CA6B4C661F661352B87F100CE04FCD9C0A`. `.gitattributes` enforces LF so the reviewed Git blob, deployable checkout and future RPC code can be compared as raw bytes. The earlier diagnostic CRLF deployment hash `2AEA0BBA3BF62EB052CD677A7007A1D40C57EB3F6E71585EC44C7B2E5DF8DF4E` is not acceptance provenance.
-The acceptance deployment and same-source upgrade both contain exactly those raw LF bytes. The current evidence worktree is not yet a reviewed release revision.
+The acceptance deployment and same-source upgrade both contain exactly those raw LF bytes. Public GitHub revisions are bound by full commit SHA; the final production release will additionally use a RuleSeal-specific annotated tag whose tag-object SHA and commit target are independently recorded after Vercel evidence is complete.
 
 ## Local checks
 
