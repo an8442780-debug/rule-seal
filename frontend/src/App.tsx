@@ -237,14 +237,14 @@ export const App: React.FC = () => {
 
         {/* Tab Content Panels with synchronized role="tabpanel" */}
         <div id="tab-panels-region">
-          {activeTab === 'lookup' && (
-            <div id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup" tabIndex={0}>
+          <div id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup" hidden={activeTab !== 'lookup'} tabIndex={activeTab === 'lookup' ? 0 : -1}>
+            {activeTab === 'lookup' && (
               <PublicLookup selectedCaseId={selectedCaseId} onSelectCase={handleSelectCase} />
-            </div>
-          )}
+            )}
+          </div>
 
-          {activeTab === 'creator' && (
-            <div id="panel-creator" role="tabpanel" aria-labelledby="tab-creator" tabIndex={0}>
+          <div id="panel-creator" role="tabpanel" aria-labelledby="tab-creator" hidden={activeTab !== 'creator'} tabIndex={activeTab === 'creator' ? 0 : -1}>
+            {activeTab === 'creator' && (
               <OwnerWorkbench
                 walletState={walletState}
                 activeCase={activeCase}
@@ -256,33 +256,33 @@ export const App: React.FC = () => {
                 }}
                 onRefreshActiveCase={handleRefreshActiveCase}
               />
-            </div>
-          )}
+            )}
+          </div>
 
-          {activeTab === 'resolver' && (
-            <div id="panel-resolver" role="tabpanel" aria-labelledby="tab-resolver" tabIndex={0}>
+          <div id="panel-resolver" role="tabpanel" aria-labelledby="tab-resolver" hidden={activeTab !== 'resolver'} tabIndex={activeTab === 'resolver' ? 0 : -1}>
+            {activeTab === 'resolver' && (
               <ResolverWorkbench
                 walletState={walletState}
                 activeCase={activeCase}
                 onTxStart={handleTxStart}
                 onRefreshActiveCase={handleRefreshActiveCase}
               />
-            </div>
-          )}
+            )}
+          </div>
 
-          {activeTab === 'integrator' && (
-            <div id="panel-integrator" role="tabpanel" aria-labelledby="tab-integrator" tabIndex={0}>
+          <div id="panel-integrator" role="tabpanel" aria-labelledby="tab-integrator" hidden={activeTab !== 'integrator'} tabIndex={activeTab === 'integrator' ? 0 : -1}>
+            {activeTab === 'integrator' && (
               <IntegratorWorkbench
                 walletState={walletState}
                 activeCase={activeCase}
                 onTxStart={handleTxStart}
               />
-            </div>
-          )}
+            )}
+          </div>
 
-          {activeTab === 'successor' && (
-            <div id="panel-successor" role="tabpanel" aria-labelledby="tab-successor" tabIndex={0}>
-              {activeCase ? (
+          <div id="panel-successor" role="tabpanel" aria-labelledby="tab-successor" hidden={activeTab !== 'successor'} tabIndex={activeTab === 'successor' ? 0 : -1}>
+            {activeTab === 'successor' && (
+              activeCase ? (
                 <SuccessorWizard
                   walletState={walletState}
                   predecessorCase={activeCase}
@@ -299,15 +299,15 @@ export const App: React.FC = () => {
                     Please select or lookup a terminal case (<code>LOCKED</code> or <code>NOT_APPLICABLE</code>) in Public Lookup to propose a successor.
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              )
+            )}
+          </div>
 
-          {activeTab === 'auditor' && (
-            <div id="panel-auditor" role="tabpanel" aria-labelledby="tab-auditor" tabIndex={0}>
+          <div id="panel-auditor" role="tabpanel" aria-labelledby="tab-auditor" hidden={activeTab !== 'auditor'} tabIndex={activeTab === 'auditor' ? 0 : -1}>
+            {activeTab === 'auditor' && (
               <AuditorView />
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </main>
 

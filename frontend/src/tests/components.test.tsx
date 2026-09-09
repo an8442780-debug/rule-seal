@@ -449,6 +449,23 @@ describe('Mounted Page Components & User Workflows', () => {
     });
 
     expect(container?.textContent).toContain('Auditor & Regulatory Observer Hub');
+    expect(container?.textContent).toContain('append-only on-chain event log');
+    expect(container?.textContent).toContain('Filter Current Page:');
+    const eventFilterValues = Array.from(container?.querySelectorAll('#filter-topic option') || []).map(
+      (option) => (option as HTMLOptionElement).value
+    );
+    expect(eventFilterValues).toEqual([
+      'ALL',
+      'CASE_CREATED',
+      'CASE_FROZEN',
+      'CASE_ASSESSED',
+      'CASE_RETRY_RESERVED',
+      'SUCCESSOR_CREATED',
+      'CASE_SUPERSEDED_BY_SUCCESSOR',
+      'INTEGRATION_BOUND',
+      'INTEGRATION_ADVANCED',
+    ]);
+    expect(container?.querySelector('.badge-NOT_APPLICABLE')).toBeNull();
   });
 
   it('renders App shell and navigates between tabs', async () => {
@@ -458,6 +475,11 @@ describe('Mounted Page Components & User Workflows', () => {
 
     expect(container?.textContent).toContain('RuleSeal');
     expect(container?.textContent).toContain('Public Evidence Lookup');
+    const tabs = Array.from(container?.querySelectorAll('[role="tab"]') || []);
+    expect(tabs).toHaveLength(6);
+    expect(tabs.every((tab) => Boolean(document.getElementById(tab.getAttribute('aria-controls') || '')))).toBe(true);
+    expect(container?.querySelectorAll('[role="tabpanel"]')).toHaveLength(6);
+    expect(container?.querySelectorAll('[role="tabpanel"]:not([hidden])')).toHaveLength(1);
 
     // Click on Case Creator tab
     const creatorTab = Array.from(container?.querySelectorAll('button') || []).find(
@@ -470,5 +492,7 @@ describe('Mounted Page Components & User Workflows', () => {
     });
 
     expect(container?.textContent).toContain('Case Creator & Lifecycle Workbench');
+    expect(document.getElementById('panel-creator')?.hidden).toBe(false);
+    expect(document.getElementById('panel-lookup')?.hidden).toBe(true);
   });
 });

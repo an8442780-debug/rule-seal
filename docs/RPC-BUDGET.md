@@ -14,9 +14,9 @@ STUDIO_MEASUREMENT_MODE: OBSERVABLE_ACTION_LEDGER
 STUDIO_MEASUREMENT_TIMING: PRE_E2E
 STUDIO_CAPABILITY_PROBE_AT: 2026-09-08T19:01:07.931Z
 STUDIO_FIRST_OBSERVABLE_UI_ACTION_AT: 2026-09-08T19:01:26.817Z
-STUDIO_FIRST_ACTION_AT: NOT_STARTED
-STUDIO_ACCEPTANCE_DEPLOYMENT_AT: NOT_STARTED
-STUDIO_E2E_STARTED_AT: NOT_STARTED
+STUDIO_FIRST_ACTION_AT: 2026-09-08T19:50:03.128817Z
+STUDIO_ACCEPTANCE_DEPLOYMENT_AT: 2026-09-08T19:50:03.128817Z
+STUDIO_E2E_STARTED_AT: 2026-09-08T19:56:03.604279Z
 STUDIO_CAPABILITY_TOOL_OR_API: Codex in-app Browser browser.capabilities.list() and supported browser/tab API inventory
 STUDIO_CAPABILITY_CHECK: Checked for physical request events, performance/request logs, proxy logs, or another exact per-request counter
 STUDIO_CAPABILITY_RESULT: Physical request telemetry is not exposed; primary-AI actions, transaction hashes, terminal states, receipts, logs, and authoritative readbacks are observable
@@ -24,7 +24,7 @@ STUDIO_PHYSICAL_COUNT_SOURCE: NOT_APPLICABLE
 STUDIO_PHYSICAL_COUNT_CLAIM: NONE
 STUDIO_REPLAY_FOR_MEASUREMENT: NO
 
-The probe completed before the first observable UI action: opening Studio in the Codex in-app Browser at `2026-09-08T19:01:26.817Z`. Read-only account discovery at `2026-09-08T19:01:33.464Z` found `0x15872d1887b8ff7322F2aa7c3c535f1F00dbb452` at `0 GEN`. The user then operated the faucet; primary-AI readback showed `1,000,000 GEN`. Those setup actions are disclosed but are not acceptance transactions. The canonical `STUDIO_FIRST_ACTION_AT` field denotes the first acceptance deployment/E2E action and, as required by the official PreDeploy audit, remains `NOT_STARTED`; acceptance deployment/E2E counters remain zero.
+The probe completed before the first observable UI action: opening Studio in the Codex in-app Browser at `2026-09-08T19:01:26.817Z`. Read-only account discovery at `2026-09-08T19:01:33.464Z` found the locked account at `0 GEN`; the user operated the faucet and primary-AI readback showed `1,000,000 GEN`. Acceptance deployment began at `19:50:03Z`, and lifecycle E2E began at `19:56:03Z`.
 
 ## STUDIO RPC BUDGET MATRIX
 
@@ -44,20 +44,20 @@ Hard stops: wrong account/network, duplicate write, unknown receipt after 5 minu
 
 ## STUDIO RPC BUDGET EVIDENCE
 
-STUDIO_EVIDENCE_STATUS: INCOMPLETE
-STUDIO_ACTION_LEDGER_STATUS: NOT_STARTED
+STUDIO_EVIDENCE_STATUS: COMPLETE
+STUDIO_ACTION_LEDGER_STATUS: COMPLETE
 STUDIO_PHYSICAL_REQUESTS: NOT_APPLICABLE
-STUDIO_ACTIONS: 0
-STUDIO_TRANSACTIONS: 0
-STUDIO_TRANSACTION_HASHES: []
-STUDIO_STATUS_POLL_ATTEMPTS: 0
-STUDIO_TERMINAL_RECEIPT_READS: 0
-STUDIO_AUTHORITATIVE_READBACKS: 0
+STUDIO_ACTIONS: 119
+STUDIO_TRANSACTIONS: 25
+STUDIO_TRANSACTION_HASHES: 25 listed in docs/STUDIONET-EVIDENCE.md
+STUDIO_STATUS_POLL_ATTEMPTS: 69
+STUDIO_TERMINAL_RECEIPT_READS: 25
+STUDIO_AUTHORITATIVE_READBACKS: 37
 STUDIO_RETRIES: 0
 STUDIO_DUPLICATE_TRANSACTIONS: 0
-STUDIO_MATRIX_VARIANCE: NOT_STARTED
+STUDIO_MATRIX_VARIANCE: NOT_APPLICABLE live label not established; one bounded attempt failed closed after three validator rotations; both premature retry attempts were retained as cooldown rollbacks; the two eligible reservations, third assessment, and cap rollback were completed on the original case
 
-Acceptance evidence is intentionally incomplete at PRE_DEPLOY. Counts above start with the future governance-eligible deployment and exclude the diagnostic transaction and user faucet setup. They are not physical-request counts.
+These are observable action-ledger counts, not physical network-request counts. `STUDIO_ACTIONS` adds each recorded submission, bounded status observation, terminal receipt inspection, and authoritative readback; it excludes passive rendering and UI navigation. All attempted writes, including semantic errors, are retained. No blind resubmission occurred.
 
 ## FRONTEND RPC BUDGET MATRIX
 

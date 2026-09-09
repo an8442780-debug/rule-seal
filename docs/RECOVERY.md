@@ -1,6 +1,6 @@
 # RuleSeal recovery
 
-These procedures describe safety boundaries, not verified live RuleSeal recovery.
+These procedures define the recovery boundaries. Studio rollback, cooldown rejection and same-source upgrade preservation have live evidence; production-wallet journal recovery remains pending until Vercel E2E.
 
 ## Pending transaction
 
@@ -38,7 +38,7 @@ Consensus rejection is not a stored UNRESOLVED outcome. Read actual state before
 
 ## Upgrade and authority loss
 
-Root Slot authorization does not prove storage compatibility. Review exact replacement source/layout and rehearse on the designated disposable instance with meaningful case, lineage and integration state. Verify authorization, source parity and before/after readbacks.
+Root Slot authorization does not prove storage compatibility. Review the exact replacement source and layout before any upgrade. RuleSeal rehearsed the approved source against its acceptance contract only after meaningful case, lineage and integration state existed, then verified finality, semantic upgrade success, exact source parity, unchanged authority and before/after state readbacks. A future source-changing upgrade requires a fresh scoped review and cannot inherit that rehearsal.
 
 RuleSeal is independent and migrates no old state. Never modify the original project's deployment/release.
 

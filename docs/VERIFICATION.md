@@ -2,26 +2,37 @@
 
 ## Release boundary
 
-Implementation is unfinished. No RuleSeal deployment, production release, final tag or live E2E is verified here. Inherited tags and another application's transactions cannot close RuleSeal gates.
+RuleSeal has an independent Studionet deployment and a completed primary-AI Studio evidence pass. Production release, final tag, Vercel E2E and downstream anonymous approvals remain open. Inherited tags and another application's transactions cannot close RuleSeal gates.
 
 Candidate canonical LF contract SHA-256: `5A2B820886BB776B5E8C7E1C1FEBC0CA6B4C661F661352B87F100CE04FCD9C0A`. `.gitattributes` enforces LF so the reviewed Git blob, deployable checkout and future RPC code can be compared as raw bytes. The earlier diagnostic CRLF deployment hash `2AEA0BBA3BF62EB052CD677A7007A1D40C57EB3F6E71585EC44C7B2E5DF8DF4E` is not acceptance provenance.
-This identifies source bytes, not an approved deployment. The worktree is not a final revision.
+The acceptance deployment and same-source upgrade both contain exactly those raw LF bytes. The current evidence worktree is not yet a reviewed release revision.
 
 ## Local checks
 
 ```powershell
 py -3.13 -m pytest -q -p no:cacheprovider
-genvm-lint check contracts\rule_seal.py
+genvm-lint lint contracts\rule_seal.py
+genvm-lint validate contracts\rule_seal.py
 Set-Location frontend
 npm test -- --run
 npm run build
 ```
 
-Contract suite: 26 cases, including three successor outcomes. Six existing unused downstream-web-mock warnings remain disclosed. Record final reruns with exact file hashes; do not treat test counts as complete coverage.
+Contract suite baseline: 26 cases, including three successor outcomes. Six existing unused downstream-web-mock warnings remain disclosed. Final rerun results are recorded with the post-deployment evidence revision.
 
 Frontend suite: 5 test files / 98 tests passed after the transaction-journal, post-chain-switch identity-bound write/readback, complete wallet-discovery cardinality/session-event coverage and modal-progress repairs. TypeScript and the Vite production build pass; the approximately 801 kB bundle warning remains documented and is not treated as a functional pass.
 
+The production build was also rerun with `VITE_CONTRACT_ADDRESS=0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb`; the generated bundle contains that exact acceptance binding. `frontend/.env.example` records the same public, non-secret value for reproducible configuration.
+
+Primary-AI browser QA used that bound production build in the Codex in-app Browser. At the default `910x698` viewport, all six workflow tabs selected their intended panel without a runtime alert; `End` moved both selection and focus from the first tab to Auditor Hub. At `360x800`, the page remained within the viewport while the workflow tabs and audit table used their own horizontal scroll regions. Auditor readback returned four cases, one integration and fourteen events. Its topic options now match the contract's emitted event names exactly, the filter is explicitly scoped to the current page, and event badges are neutral rather than misusing a case-outcome color.
+
 [Official testing documentation](https://docs.genlayer.com/developers/intelligent-contracts/testing), checked 2026-09-09, distinguishes in-process Direct Mode from network integration.
+
+## Studio verification completed
+
+Deployment, exact raw-byte source parity, schema/upgrader readback, LOCKED, UNRESOLVED, minimum/effective date boundaries, duplicate nonce rollback, retry cooldown rollback, reciprocal successor lineage, predecessor supersession, integration advancement, unauthorized actor rejection, validator disagreement rollback and same-source upgrade state preservation have live evidence in `docs/STUDIONET-EVIDENCE.md`.
+
+The live `NOT_APPLICABLE` attempt failed closed with `INVALID_ASSESSMENT` after `MAJORITY_DISAGREE`; state remained FROZEN. It is explicitly not counted as NOT_APPLICABLE evidence. The original minimum-date case proves both one-hour retry boundaries, three total assessments, and a finalized `MAX_RETRIES_EXCEEDED` rollback with unchanged authoritative state.
 
 ## Corrected acceptance matrix
 
@@ -43,7 +54,7 @@ Automated tests: test_successor_creation_and_lifecycle (three outcomes) and test
 
 ## Remaining release verification
 
-Prove grammar/date boundaries, nonce/fingerprint guards, retry cooldown/cap, source identity/dates, malformed/missing/conflicting evidence, validator disagreement, serialization, schema/runtime and meaningful-state upgrade preservation.
+Local regression must remain green for grammar/date boundaries, nonce/fingerprint guards, retry cooldown/cap, source identity/dates, malformed/missing/conflicting evidence, validator disagreement, serialization and schema/runtime. Live evidence above supplements rather than replaces those tests.
 
 Frontend must verify all six workflows, exact provider routing, session consistency, passive chooser, finality/execution/readback, journal reconciliation, numeric RPC budgets, focus/keyboard/contrast, reduced motion and mobile/desktop rendering. Existing unit tests do not close unexercised paths.
 

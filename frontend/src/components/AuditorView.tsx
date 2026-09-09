@@ -54,7 +54,7 @@ export const AuditorView: React.FC = () => {
       <RoleBoundaryBanner
         role="auditor"
         title="Auditor & Regulatory Observer Mode"
-        description="Inspect the append-only cryptographic event log, monitor system health metrics, and audit incorporation locks across all cases."
+        description="Inspect the append-only on-chain event log, monitor system health metrics, and audit incorporation locks across all cases."
       />
 
       <div className="card">
@@ -136,7 +136,7 @@ export const AuditorView: React.FC = () => {
         >
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
             <label htmlFor="filter-topic" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--rs-text-heading)' }}>
-              Filter Topic:
+              Filter Current Page:
             </label>
             <select
               id="filter-topic"
@@ -148,9 +148,11 @@ export const AuditorView: React.FC = () => {
               <option value="ALL">All Event Topics</option>
               <option value="CASE_CREATED">CASE_CREATED</option>
               <option value="CASE_FROZEN">CASE_FROZEN</option>
-              <option value="ASSESSMENT_COMPLETED">ASSESSMENT_COMPLETED</option>
+              <option value="CASE_ASSESSED">CASE_ASSESSED</option>
+              <option value="CASE_RETRY_RESERVED">CASE_RETRY_RESERVED</option>
               <option value="SUCCESSOR_CREATED">SUCCESSOR_CREATED</option>
-              <option value="INTEGRATION_ACTIVATED">INTEGRATION_ACTIVATED</option>
+              <option value="CASE_SUPERSEDED_BY_SUCCESSOR">CASE_SUPERSEDED_BY_SUCCESSOR</option>
+              <option value="INTEGRATION_BOUND">INTEGRATION_BOUND</option>
               <option value="INTEGRATION_ADVANCED">INTEGRATION_ADVANCED</option>
             </select>
           </div>
@@ -189,7 +191,7 @@ export const AuditorView: React.FC = () => {
                   <tr key={evt.event_id || idx}>
                     <td className="mono" style={{ fontWeight: 700, color: 'var(--rs-text-heading)' }}>{evt.event_id}</td>
                     <td>
-                      <span className={`badge badge-${evt.event_type.includes('CREATED') || evt.event_type.includes('ACTIVATED') ? 'LOCKED' : evt.event_type.includes('FROZEN') ? 'FROZEN' : 'NOT_APPLICABLE'}`}>
+                      <span className="badge badge-DRAFT">
                         {evt.event_type}
                       </span>
                     </td>

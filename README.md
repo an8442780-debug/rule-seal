@@ -6,7 +6,7 @@ RuleSeal freezes an activity date and regulatory reference, then asks independen
 
 ## Development status
 
-Independent-contract upgrade in progress. RuleSeal has not been deployed or released. Its contract address, Explorer, public repository and production website require independent verification. Previous-project transactions and wallet evidence are not RuleSeal evidence.
+RuleSeal now has an independent Studionet acceptance deployment at `0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb`. Deployment, exact-source parity, lifecycle E2E and same-source upgrade rehearsal are recorded in `docs/STUDIONET-EVIDENCE.md`; anonymous POST_DEPLOY_TEST approval, public repository and production release remain pending. Previous-project transactions and wallet evidence are not RuleSeal evidence.
 
 ## How it works
 
@@ -45,14 +45,15 @@ Use the existing configured Python 3.13/GenLayer environment and a Node version 
 
 ```powershell
 py -3.13 -m pytest -q -p no:cacheprovider
-genvm-lint check contracts\rule_seal.py
+genvm-lint lint contracts\rule_seal.py
+genvm-lint validate contracts\rule_seal.py
 Set-Location frontend
 npm test -- --run
 npm run build
 npm run dev
 ```
 
-Without VITE_CONTRACT_ADDRESS the app is unconfigured. Set it only to the verified RuleSeal deployment on Studionet. Never place secrets or another project's contract address in the frontend.
+Without `VITE_CONTRACT_ADDRESS` the app is unconfigured. For RuleSeal builds, set it to the verified Studionet address `0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb`. Never place secrets or another project's contract address in the frontend.
 
 ## Evidence and limits
 
