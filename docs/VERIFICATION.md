@@ -40,11 +40,12 @@ The live `NOT_APPLICABLE` attempt failed closed with `INVALID_ASSESSMENT` after 
 
 ### Presentation release
 
-- Presentation source revision: `ddffeedd50a8c43d722ed5c1d0b20b022061b4d8`; Vercel deployment: `dpl_FRMSeyLDfSb6GBiFtc5v5jZaX3ro`; status: `READY`.
+- Presentation source revision: `20646720c9dce54c4790a3c6aab413caa4c9e767`; Vercel deployment: `dpl_9tyGAJA5FueuVf3diCtwp5XRoPjE`; status: `READY`.
 - The delta is limited to the landing guidance and visual stylesheet. Contract, RPC, wallet, journal and transaction code are unchanged.
 - Five frontend test files / 106 tests and the exact-environment production build pass. The existing approximately 802 kB chunk warning remains non-blocking.
 - Stable production root returns HTTP 200 and a nonexistent route returns HTTP 404. Desktop and 375px browser inspection show the redesigned header, briefing, workflow navigation and workbench surfaces with no page-level horizontal overflow.
 - Exact-environment local and deployed assets match byte-for-byte: JavaScript SHA-256 `0F47954199A6A3FD23944861A57CC162A6F7459094E1B3740894FEF921B67A53`; CSS SHA-256 `4A5B7EB37218FD5C68FAFEB08394D9FA8122AC68C185E3C8AA4A9D2A7CE1845F`.
+- The public Explorer logo is an opaque 1024×1024 RGB PNG, 435,535 bytes, rendered from the committed RuleSeal SVG source and available at `https://rule-seal.vercel.app/rule-seal-logo.png`.
 - The previous transaction and readback evidence below remains bound to its tested revision. No transaction was sent or replayed for this presentation-only release.
 
 ### Transaction-tested release
