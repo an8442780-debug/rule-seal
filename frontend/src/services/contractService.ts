@@ -47,7 +47,7 @@ function matchesSuccessor(successor: CaseRecord, predecessor: CaseRecord, sender
 
 function matchesIntegration(record: IntegrationRecord, sender: string, namespace: string, caseId: string): boolean {
   return Boolean(record && record.case_id === caseId && record.caller?.toLowerCase() === sender.toLowerCase() &&
-    record.namespace === namespace.trim() && record.state === 'ACTIVE');
+    record.namespace === namespace.trim() && record.state === 'BOUND_TO_CASE');
 }
 
 function hasAssessment(record: CaseRecord, caseId: string): boolean {

@@ -238,7 +238,7 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
       namespace: 'compliance-checklist',
       case_id: 'REAL-000001',
       previous_case_id: '',
-      state: 'ACTIVE',
+      state: 'BOUND_TO_CASE',
       registered_at: '2025-10-01T00:05:00Z',
       updated_at: '2025-10-01T00:10:00Z',
     };
@@ -247,7 +247,26 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
 
     const result = await contractService.getIntegration('0x1111111111111111111111111111111111111111', 'compliance-checklist', true);
     expect(result.case_id).toBe('REAL-000001');
-    expect(result.state).toBe('ACTIVE');
+    expect(result.state).toBe('BOUND_TO_CASE');
+  });
+
+  it('reconciles the canonical BOUND_TO_CASE integration readback without resubmitting', async () => {
+    const pending = {
+      id: 'integration-op', type: 'activate_integration', timestamp: Date.now(), status: 'SUBMITTED' as const,
+      sender, chainId: 61999, contractAddress: `0x${'3'.repeat(40)}`, txHash: hash,
+      params: { namespace: '  ruleseal-web-e2e  ', caseId: 'REAL-000005' },
+    };
+    vi.spyOn(contractService, 'getConfiguredContractAddress').mockReturnValue(`0x${'3'.repeat(40)}`);
+    vi.spyOn(contractService, 'getIntegration').mockResolvedValue({
+      caller: sender.toLowerCase(), namespace: 'ruleseal-web-e2e', case_id: 'REAL-000005',
+      previous_case_id: '', state: 'BOUND_TO_CASE', registered_at: '2026-09-09T19:59:23Z',
+      updated_at: '2026-09-09T19:59:23Z',
+    });
+    const createClient = vi.spyOn(contractService, 'createWriteClient');
+
+    await expect(contractService.verifyPendingOperation(pending)).resolves.toBe(true);
+    expect(contractService.getIntegration).toHaveBeenCalledWith(sender, 'ruleseal-web-e2e', true);
+    expect(createClient).not.toHaveBeenCalled();
   });
 
   it('passes exact selected provider and account to createClient on write', async () => {
