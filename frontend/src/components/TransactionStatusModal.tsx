@@ -11,7 +11,7 @@ const COPY: Record<TxStep, [string, string]> = {
   WAITING_FOR_FINALITY: ['Waiting for finality', 'Studionet is processing the transaction. Submission or acceptance is not final success.'],
   VERIFYING_EXECUTION: ['Verifying execution', 'The transaction is finalized. Its execution result is being checked.'],
   VERIFYING_READBACK: ['Verifying the result', 'The finalized execution is being compared with authoritative contract state.'],
-  SUCCESS: ['Transaction complete', 'Finality, successful execution and the resulting contract state were verified.'],
+  SUCCESS: ['Transaction complete', 'Finality, successful execution and the resulting contract state were verified. Opening the updated record…'],
   REJECTED: ['Request rejected', 'You declined the wallet request. Review the form before trying again.'],
   FAILED: ['Transaction failed', 'The finalized transaction did not execute successfully.'],
   RECONCILIATION_REQUIRED: ['Verification interrupted', 'Do not submit again. Close this dialog and use Reconcile with Chain to check the existing operation.'],
@@ -64,6 +64,12 @@ export const TransactionStatusModal: React.FC<Props> = ({ isOpen, step, detail, 
       if (trigger?.isConnected) trigger.focus();
     };
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible || step !== 'SUCCESS') return;
+    const timer = window.setTimeout(() => onCloseRef.current(), 1800);
+    return () => window.clearTimeout(timer);
+  }, [visible, step]);
 
   if (!visible) return null;
   const hash = /^0x[0-9a-fA-F]{64}$/.test(detail?.txHash ?? '') ? detail.txHash as string : null;

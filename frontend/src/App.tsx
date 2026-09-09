@@ -113,12 +113,18 @@ export const App: React.FC = () => {
   };
 
   const handleTxClose = () => {
+    const completedCaseId = txStep === 'SUCCESS' ? txDetail?.newCaseId || txDetail?.caseId : null;
     setIsTxModalOpen(false);
     setTxStep('IDLE');
     setTxDetail(null);
     try { setPendingOps(journalService.getPendingOperations()); }
     catch { setRecoveryError('Recovery storage is unavailable. Do not submit again until the existing operation is verified.'); }
-    handleRefreshActiveCase();
+    if (completedCaseId) {
+      setActiveTab('lookup');
+      void handleSelectCase(completedCaseId);
+    } else {
+      void handleRefreshActiveCase();
+    }
   };
 
   // Keyboard navigation for WAI-ARIA tabs (ArrowLeft, ArrowRight, Home, End)

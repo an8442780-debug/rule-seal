@@ -104,6 +104,20 @@ describe('Mounted Page Components & User Workflows', () => {
     } finally { trigger.remove(); }
   });
 
+  it('automatically closes a successfully verified transaction after a brief acknowledgement', async () => {
+    vi.useFakeTimers();
+    const close = vi.fn();
+    try {
+      await act(async () => { root?.render(<TransactionStatusModal isOpen step="SUCCESS" detail={{ caseId: 'REAL-000005' }} onClose={close} />); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(1799); });
+      expect(close).not.toHaveBeenCalled();
+      await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+      expect(close).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('keeps public workflows mounted and reports unreadable recovery data without deleting it', async () => {
     localStorage.setItem(JOURNAL_STORAGE_KEY, '{broken');
     vi.spyOn(contractService, 'getCaseCount').mockResolvedValue(0);

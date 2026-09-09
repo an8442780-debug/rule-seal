@@ -20,7 +20,7 @@ npm run build
 
 Contract suite baseline: 26 cases, including three successor outcomes. Six existing unused downstream-web-mock warnings remain disclosed. Final rerun results are recorded with the post-deployment evidence revision.
 
-Frontend suite: 5 test files / 104 tests passed after the transaction-journal, post-chain-switch identity-bound write/readback, complete wallet-discovery cardinality/session-event coverage, modal-progress repairs, and the Vercel E2E wallet-cardinality correction. TypeScript and the Vite production build pass; the approximately 801 kB bundle warning remains documented and is not treated as a functional pass.
+Frontend suite: 5 test files / 105 tests passed after the transaction-journal, post-chain-switch identity-bound write/readback, complete wallet-discovery cardinality/session-event coverage, modal-progress repairs, and the Vercel E2E wallet-cardinality correction. A successful modal remains visible briefly, then closes automatically and routes to the authoritative updated case. TypeScript and the Vite production build pass; the approximately 801 kB bundle warning remains documented and is not treated as a functional pass.
 
 The production build was also rerun with `VITE_CONTRACT_ADDRESS=0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb`; the generated bundle contains that exact acceptance binding. `frontend/.env.example` records the same public, non-secret value for reproducible configuration.
 
