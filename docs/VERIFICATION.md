@@ -5,7 +5,7 @@
 RuleSeal is deployed on Studionet and its production app is live at `https://rule-seal.vercel.app`. Contract deployment, source parity, validator execution, authoritative readbacks and the OKX wallet production journey are recorded below with their exact revisions.
 
 Canonical LF contract SHA-256: `5A2B820886BB776B5E8C7E1C1FEBC0CA6B4C661F661352B87F100CE04FCD9C0A`. `.gitattributes` enforces LF so the committed source and deployed code can be compared as raw bytes.
-The acceptance deployment and same-source upgrade both contain exactly those raw LF bytes. Public GitHub revisions are bound by full commit SHA; the final review package also records the annotated release tag, tag-object SHA and commit target.
+The acceptance deployment and same-source upgrade both contain exactly those raw LF bytes. Public GitHub revisions are bound by full commit SHA, annotated release tag, tag-object SHA and commit target.
 
 ## Local checks
 
