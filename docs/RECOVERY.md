@@ -1,6 +1,6 @@
 # RuleSeal recovery
 
-These procedures define the recovery boundaries. Studio rollback, cooldown rejection and same-source upgrade preservation have live evidence; production-wallet journal recovery remains pending until Vercel E2E.
+These procedures define the recovery boundaries. Studio rollback, cooldown rejection, same-source upgrade preservation and production-wallet journal recovery have live evidence.
 
 ## Pending transaction
 
@@ -15,6 +15,8 @@ Recovery storage is scoped to the configured chain and contract. Account-specifi
 If persistence fails after submission, keep the page open and copy the displayed hash. The volatile journal protects the current page, but cannot guarantee recovery after closing it. Do not claim cross-tab atomicity from localStorage. Finalized success does not clear the record until its method-specific expected identity and state agree; failed cleanup remains locked.
 
 Foreground polling stops after at most 24 reads or five minutes. A hidden page makes no further polls and ends at its deadline. An unavailable read stops verification rather than silently submitting another write. Physical-network budgets, cancellation of underlying SDK requests and full reload-budget enforcement still require completion and measurement before release.
+
+The production integration recovery proved that method-specific expectations must use the contract's canonical stored state. A stale frontend expectation of `ACTIVE` falsely produced `RECONCILIATION_REQUIRED` even though the transaction was finalized successfully; the final matcher requires `BOUND_TO_CASE`. Reload reconciliation then used the retained sender, namespace, case and hash, performed authoritative readback, cleared the journal and submitted no new write.
 
 ## RPC and source failures
 

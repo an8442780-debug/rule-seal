@@ -2,7 +2,7 @@
 
 ## Release boundary
 
-RuleSeal has an independent Studionet deployment and anonymous `POST_DEPLOY_TEST` approval for exact evidence revision `6dabaf1998e3776b256a17ba89f94beabe344a35`. The production app is live at `https://rule-seal.vercel.app`; final tag, wallet Vercel E2E and `POST_MILESTONE_REVIEW` remain open. Inherited tags and another application's transactions cannot close RuleSeal gates.
+RuleSeal has an independent Studionet deployment and anonymous `POST_DEPLOY_TEST` approval for exact evidence revision `6dabaf1998e3776b256a17ba89f94beabe344a35`. The production app is live at `https://rule-seal.vercel.app`; OKX wallet Vercel E2E is complete, while the final tag and `POST_MILESTONE_REVIEW` remain open. Inherited tags and another application's transactions cannot close RuleSeal gates.
 
 Candidate canonical LF contract SHA-256: `5A2B820886BB776B5E8C7E1C1FEBC0CA6B4C661F661352B87F100CE04FCD9C0A`. `.gitattributes` enforces LF so the reviewed Git blob, deployable checkout and future RPC code can be compared as raw bytes. The earlier diagnostic CRLF deployment hash `2AEA0BBA3BF62EB052CD677A7007A1D40C57EB3F6E71585EC44C7B2E5DF8DF4E` is not acceptance provenance.
 The acceptance deployment and same-source upgrade both contain exactly those raw LF bytes. Public GitHub revisions are bound by full commit SHA; the final production release will additionally use a RuleSeal-specific annotated tag whose tag-object SHA and commit target are independently recorded after Vercel evidence is complete.
@@ -20,7 +20,7 @@ npm run build
 
 Contract suite baseline: 26 cases, including three successor outcomes. Six existing unused downstream-web-mock warnings remain disclosed. Final rerun results are recorded with the post-deployment evidence revision.
 
-Frontend suite: 5 test files / 105 tests passed after the transaction-journal, post-chain-switch identity-bound write/readback, complete wallet-discovery cardinality/session-event coverage, modal-progress repairs, and the Vercel E2E wallet-cardinality correction. A successful modal remains visible briefly, then closes automatically and routes to the authoritative updated case. TypeScript and the Vite production build pass; the approximately 801 kB bundle warning remains documented and is not treated as a functional pass.
+Frontend suite: 5 test files / 106 tests passed after the transaction-journal, post-chain-switch identity-bound write/readback, complete wallet-discovery cardinality/session-event coverage, modal-progress repairs, Vercel E2E wallet-cardinality correction and canonical integration-state reconciliation regression. A successful modal remains visible briefly, then closes automatically and routes to the authoritative updated case. Failed or uncertain transactions remain visible with their hash and a manual recovery/close action. TypeScript and the Vite production build pass; the approximately 802 kB bundle warning remains documented and is not treated as a functional pass.
 
 The production build was also rerun with `VITE_CONTRACT_ADDRESS=0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb`; the generated bundle contains that exact acceptance binding. `frontend/.env.example` records the same public, non-secret value for reproducible configuration.
 
@@ -38,12 +38,15 @@ The live `NOT_APPLICABLE` attempt failed closed with `INVALID_ASSESSMENT` after 
 
 ## Production release verification
 
-- Vercel team/project: `an8442780-debug/rule-seal`; deployment `dpl_AjgS8F2zc1Sz2MCxyxbQ3DMhPnEQ`; status `READY`.
+- Vercel team/project: `an8442780-debug/rule-seal`; deployment `dpl_Cts9AvhDmPxD63Z8m9Ra9NZySD55`; status `READY`; exact frontend source revision `a61d02dd86b514eb8da47185ffa5a358c174fd11`.
 - Stable production URL: `https://rule-seal.vercel.app` returned HTTP 200; a nonexistent route returned HTTP 404.
 - Public logo returned HTTP 200 as `image/svg+xml` (6,322 bytes).
-- Exact-env local production build and deployed assets match byte-for-byte: JavaScript SHA-256 `677B62BB2D427FF955F3421390F986A20984BA529C6B8CB351364A17E9C4F97D`; CSS SHA-256 `B30ED5B82971F669D2D58F256678F4111AA5DF57997BC030A3E758269E480888`.
+- Exact-env local production build and deployed assets match byte-for-byte: JavaScript SHA-256 `D16A408572760411BA2F8EC0100B33D2D2BE4BE4C0CC22BBFABDC79231F8B3C5`; CSS SHA-256 `B30ED5B82971F669D2D58F256678F4111AA5DF57997BC030A3E758269E480888`.
 - The deployed bundle contains the exact RuleSeal contract binding and no old project name/logo/slug. The exact-env build is 800.73 kB JavaScript / 193.20 kB gzip; its documented chunk warning is non-blocking.
-- Public wallet journeys and measured frontend RPC counts remain pending until the user authorizes Vercel E2E.
+- Chrome profile 4 discovered only the installed OKX provider, connected to Studionet, retained real hashes through pending/finality, and completed create → freeze → assess for `REAL-000006`. Authoritative UI/RPC readback is LOCKED with assessment `REAL-000006-A01`, `EDITION_APPLIES`, edition `FAA Order JO 7400.11K`, and exact official-document/source status fields.
+- Integration transaction `0xbe79864b0bdcc30749ebbc70953019b6c7a8d4191a811e61cf5f9df1ea64248d` was independently FINALIZED/MAJORITY_AGREE/leader SUCCESS. The frontend's stale `ACTIVE` expectation was corrected to canonical `BOUND_TO_CASE`; exact-release reload reconciliation cleared the journal without a new transaction.
+- The first fresh-case attempt retained its finalized failure hash when the browser date control still submitted the existing `2025-10-01` fingerprint. The modal correctly remained open, state did not mutate, and no blind retry occurred. After the date value was visibly verified as `2025-11-01`, one distinct create was submitted and succeeded.
+- Success modals auto-closed after the documented brief confirmation and routed to the authoritative record. Failure/reconciliation modals intentionally remained until their explicit close/recovery action so hashes could not be lost.
 
 ## Corrected acceptance matrix
 

@@ -79,12 +79,20 @@ Read retries apply only to explicit HTTP 429/5xx and use 1s/3s plus at most 200m
 
 ## FRONTEND RPC BUDGET EVIDENCE
 
-FRONTEND_EVIDENCE_STATUS: INCOMPLETE
+FRONTEND_EVIDENCE_STATUS: COMPLETE
 
-Automated evidence currently covers in-flight deduplication, 10s cache, invalidation, bounded backoff, abort/cancellation, Strict Mode safety, measured journey metrics, 24-poll ceiling, hidden-tab pause, retained transaction hash, reconciliation and no automatic resubmit. Exact-release measured browser journey counts remain incomplete until Vercel E2E.
+Automated evidence covers in-flight deduplication, 10s cache, invalidation, bounded backoff, abort/cancellation, Strict Mode safety, measured journey metrics, 24-poll ceiling, hidden-tab pause, retained transaction hash, reconciliation and no automatic resubmit. Chrome profile 4 then measured the exact frontend source revision `a61d02dd86b514eb8da47185ffa5a358c174fd11` at production deployment `dpl_Cts9AvhDmPxD63Z8m9Ra9NZySD55`.
 
 | Screen/workflow | Request source/method | Actual requests | Cache hit/miss | In-flight dedupe | Poll attempts | Retry/delay | Invalidations | Readback calls | Actual transactions | Variance/result |
 |---|---|---:|---|---|---:|---|---|---:|---:|---|
-| Automated regression only | mocked shared/write clients | 0 | asserted | asserted | 24 | 1s/3s | asserted | asserted | 0 | Browser measurement pending |
+| Existing-hash integration reconciliation | transaction status plus `get_integration` | 7 logical calls: public lookup 6, integration readback 1 | cold misses; no stale-success cache | one reconciler | 0 new polls after terminal status was independently known | 0 | terminal cleanup only | 1 | 0 | PASS; canonical `BOUND_TO_CASE`; pending journal became `[]`; no resubmit |
+| Exact-release create/freeze/assess journey | transaction polling plus case/assessment views | 73 cumulative logical calls before browser recovery: public lookup 28, integration 3, auditor 2, transaction poll 33, case detail 7 | safe 10s cache active; consequential readbacks bypassed | single-flight writes | 33 across four terminal transactions; each write stayed below 24 | 0 | case/assessment/integration/event methods after writes | 7 recorded case/readback calls plus final replacement-tab case and assessment reads | 4 | PASS with disclosed negative row below; successful case `REAL-000006` reached DRAFT, FROZEN, then LOCKED |
+| Duplicate-fingerprint negative | `create_case` | included in cumulative row | no cache used for guard | one write only | 8 | 0 | none after terminal failure | 0 | 1 | Expected finalized execution failure; submitted date remained `2025-10-01`; no state mutation and no blind retry |
+| Corrected fresh create | `create_case` plus `get_case_by_nonce` | included in cumulative row | authoritative miss | one write only | 8 | 0 | case/event indexes | 1 | 1 | FINALIZED/SUCCESS; `REAL-000006`, date `2025-11-01`, DRAFT |
+| Freeze | `freeze_case` plus `get_case` | included in cumulative row | authoritative miss | one write only | 8 | 0 | case/events | 1 | 1 | FINALIZED/SUCCESS; FROZEN readback; success modal auto-closed |
+| Assessment | `assess_case` plus case/assessment reads | included in cumulative row | authoritative misses | one write only | 9 | 0 | case/assessment/events | 3 | 1 | FINALIZED/MAJORITY_AGREE/leader SUCCESS; LOCKED and assessment readback |
+| Replacement-tab public verification | public case and assessment views | 9 logical calls: public lookup 7, case detail 1, assessment 1 | cold misses | identical reads joined | 0 | 0 | none | 2 | 0 | PASS after browser-control recovery; visible LOCKED result and official evidence |
 
-Release closes only when the exact deployed frontend stays within every journey maximum with no duplicate writes, no provider reacquisition and complete finality/execution/readback evidence.
+Logical-call evidence is the application-owned local aggregate, not a claim about physical browser transport events. There were zero 429/5xx retries, zero automatic write retries and zero duplicate submissions. The four writes comprise one retained fail-closed negative and three distinct successful lifecycle writes. Each individual journey stayed within its numeric matrix maximum.
+
+Release closes only when the exact deployed frontend stays within every journey maximum with no duplicate writes, no provider reacquisition and complete finality/execution/readback evidence. This exact release satisfies that condition.
