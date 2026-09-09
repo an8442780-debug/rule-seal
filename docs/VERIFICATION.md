@@ -5,7 +5,7 @@
 RuleSeal is deployed on Studionet and its production app is live at `https://rule-seal.vercel.app`. Contract deployment, source parity, validator execution, authoritative readbacks and the OKX wallet production journey are recorded below with their exact revisions.
 
 Candidate canonical LF contract SHA-256: `5A2B820886BB776B5E8C7E1C1FEBC0CA6B4C661F661352B87F100CE04FCD9C0A`. `.gitattributes` enforces LF so the reviewed Git blob, deployable checkout and future RPC code can be compared as raw bytes. The earlier diagnostic CRLF deployment hash `2AEA0BBA3BF62EB052CD677A7007A1D40C57EB3F6E71585EC44C7B2E5DF8DF4E` is not acceptance provenance.
-The acceptance deployment and same-source upgrade both contain exactly those raw LF bytes. Public GitHub revisions are bound by full commit SHA; the final production release will additionally use a RuleSeal-specific annotated tag whose tag-object SHA and commit target are independently recorded after Vercel evidence is complete.
+The acceptance deployment and same-source upgrade both contain exactly those raw LF bytes. Public GitHub revisions are bound by full commit SHA; the final review package also records the annotated release tag, tag-object SHA and commit target.
 
 ## Local checks
 
@@ -40,7 +40,7 @@ The live `NOT_APPLICABLE` attempt failed closed with `INVALID_ASSESSMENT` after 
 
 ### Presentation release
 
-- Presentation source revision: `20646720c9dce54c4790a3c6aab413caa4c9e767`; Vercel deployment: `dpl_9tyGAJA5FueuVf3diCtwp5XRoPjE`; status: `READY`.
+- Presentation source revision: `2064672ac43677944cdc4786d7b7e93a409036d5`; Vercel deployment: `dpl_9tyGAJA5FueuVf3diCtwp5XRoPjE`; status: `READY`.
 - The delta is limited to the landing guidance and visual stylesheet. Contract, RPC, wallet, journal and transaction code are unchanged.
 - Five frontend test files / 106 tests and the exact-environment production build pass. The existing approximately 802 kB chunk warning remains non-blocking.
 - Stable production root returns HTTP 200 and a nonexistent route returns HTTP 404. Desktop and 375px browser inspection show the redesigned header, briefing, workflow navigation and workbench surfaces with no page-level horizontal overflow.
