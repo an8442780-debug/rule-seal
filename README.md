@@ -8,7 +8,7 @@ RuleSeal freezes an activity date and regulatory reference, then asks independen
 
 RuleSeal is released against the Studio Dev preview network (chain `61997`). The existing Studionet release is historical and is not evidence for this network migration. The fresh Studio deployment, validator results and authoritative readbacks are recorded; GitHub/Vercel parity and production wallet journeys remain the final release gate.
 
-Target links after fresh release: [Live app](https://rule-seal.vercel.app) · [Studio Dev Explorer](https://explorer-studio-dev.genlayer.com/) · [Studio Dev evidence](docs/STUDIONET-EVIDENCE.md)
+Verified release links: [Live app](https://rule-seal.vercel.app) · [Studio Dev contract](https://explorer-studio-dev.genlayer.com/address/0x63F046607998E02f7888a557a60c1e5bdD925C65) · [Deployment transaction](https://explorer-studio-dev.genlayer.com/tx/0xc1e62765de2b5c53dcb8d8628f12c2b7a24f00b813b53a4011fad362dbc3ba16) · [Studio Dev evidence](docs/STUDIONET-EVIDENCE.md)
 
 ## Trust problem
 

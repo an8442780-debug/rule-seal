@@ -15,6 +15,11 @@ Target runtime:
 - Explorer: `https://explorer-studio-dev.genlayer.com/`
 - Contract source hash and final revision: bound by the fresh PRE_DEPLOY package
 
+Current Studio evidence baseline: Git revision
+`3889af8747aacd712698782f959ec1191e86ff04`, contract source revision
+`3c124aa0b5746ed03350639c28dc18e46a7a2dd7`, and canonical LF contract SHA-256
+`FAE8EF0D956E06211E5E95A0EB7E15713D1E815B61E5E4E5820B1DC03247ADA4`.
+
 ## Local checks
 
 Run the pinned toolchain, not an ambient Python/GenVM installation:
