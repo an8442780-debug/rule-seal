@@ -20,10 +20,10 @@ FR_2025_EXACT_JSON = (FIXTURES_DIR / "official_federal_register_2025_16493_exact
 
 def warp(direct_vm, timestamp):
     direct_vm.warp(timestamp)
-    if "genlayer.gl" in sys.modules:
-        gl = sys.modules["genlayer.gl"]
-        if hasattr(gl, "message_raw") and gl.message_raw is not None:
-            gl.message_raw["datetime"] = timestamp
+    if "genlayer.message" in sys.modules:
+        message = sys.modules["genlayer.message"]
+        if isinstance(message.raw, dict):
+            message.raw["datetime"] = timestamp
 
 
 def test_grammar_and_allowlist_validation(direct_deploy, direct_vm, direct_alice):
@@ -686,7 +686,7 @@ def test_root_slot_upgrade_and_storage_preservation(direct_deploy, direct_vm, di
     rehearsal_code = b"# upgraded code rehearsal"
     contract.upgrade(rehearsal_code)
 
-    from genlayer import gl
+    import genlayer as gl
     assert bytes(gl.storage.Root.get().code.get()) == rehearsal_code
     # Storage is preserved
     assert json.loads(contract.get_case(case_id))["case_id"] == case_id
