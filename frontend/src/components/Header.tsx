@@ -51,15 +51,15 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 className="btn btn-sm btn-danger"
                 onClick={onSwitchChain}
-                title="Click to switch to Studionet (61999)"
-                aria-label="Switch to Studionet network"
+                title="Click to switch to Studio Next preview (61997)"
+                aria-label="Switch to Studio Next preview network"
               >
-                Switch to Studionet
+                Switch to Studio Next preview
               </button>
             ) : (
-              <div className="badge-network" title="Connected to GenLayer Studionet">
+              <div className="badge-network" title="Connected to GenLayer Studio Next preview">
                 <span className="network-dot" aria-hidden="true" />
-                <span>Studionet ({STUDIONET_CONFIG.chainId})</span>
+                <span>Studio Next preview ({STUDIONET_CONFIG.chainId})</span>
               </div>
             )}
 

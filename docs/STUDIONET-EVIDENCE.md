@@ -1,31 +1,40 @@
-# RuleSeal Studionet Evidence
+# RuleSeal Studio Dev Evidence
 
-## Deployment
+## Evidence boundary
 
-The public deployment is recorded in [DEPLOYMENT.md](DEPLOYMENT.md), including the Studionet contract address, deployment Explorer link, finalized receipt, semantic success, consensus result, schema count and canonical source hash.
+This ledger is reserved for the migrated Studio Dev preview release:
 
-## Verified lifecycle behavior
+- Network: `studio-dev`
+- Chain ID: `61997`
+- RPC: `https://studio-dev.genlayer.com/api`
+- Contract: **PENDING FRESH 61997 DEPLOYMENT**
+- Source revision: **BOUND AT PRE_DEPLOY**
+- Canonical source hash: **BOUND AT PRE_DEPLOY**
 
-Write results were checked as finalized transactions with semantic execution and authoritative state readback. Expected rejections are retained as state-preserving failures.
+The previous Studionet deployment is invalidated for this release. Its contract
+address, receipts, state, readbacks and runtime records are retained only in
+historical task records and are not proof for this ledger.
 
-| Area | Verified result |
-|---|---|
-| Case lifecycle | DRAFT → FROZEN → LOCKED is recorded with the assessment and official-source evidence. |
-| Source-unavailable path | An accepted assessment records UNRESOLVED with the source status and retry information. |
-| Retry policy | Premature retries are rejected without mutation; eligible retries are bounded; the retry cap rejects further attempts without mutation. |
-| Duplicate protection | Reusing a nonce with changed inputs is rejected and the original record remains authoritative. |
-| Date boundaries | The minimum supported date, effective-date boundary and maximum supported date are covered by live or deterministic verification as applicable. |
-| Successor lineage | A successor starts in DRAFT, keeps reciprocal lineage, and does not supersede its predecessor until it reaches a conclusive state. |
-| Supersession | A conclusive successor reaches LOCKED or NOT_APPLICABLE and then supersedes the predecessor. |
-| Integration | A caller-scoped integration binds to a LOCKED case; same-case rebinding is idempotent; explicit advancement requires a different declared conclusive successor. |
-| Authorization | Non-owner and undeclared replacement actions are rejected without state mutation. |
-| Validator disagreement | Conflicting validator assessments fail closed and preserve the prior authoritative state. |
-| Upgrade preservation | The source-preserving rehearsal retains cases, lineage, integrations, events and authority. |
+## Required fresh evidence
 
-## Evidence boundaries
+Every acceptance write must retain its stable operation ID and hash, and must be
+accepted only after all of the following are recorded:
 
-The live environment can produce a validator disagreement for a requested outcome. That failure is recorded as a fail-closed disagreement, not relabeled as a successful outcome. Deterministic tests cover the remaining outcome classifications and malformed, missing, mismatched and unavailable source evidence.
+1. `FINALIZED` transaction status.
+2. Successful EVM receipt and semantic GenVM execution result.
+3. Consensus/finality result.
+4. Authoritative state readback matching the requested transition.
+5. Source/code readback matching the exact reviewed bytes.
 
-## Public verification method
+Required lifecycle rows are: DRAFT → FROZEN → LOCKED, UNRESOLVED and its
+cooldown/cap rollback, date-boundary behavior, successor lineage and
+supersession, integration binding/advancement, unauthorized rejection,
+validator disagreement fail-closed behavior, and upgrader/state preservation.
 
-Inspect the contract address and deployment Explorer record, read the public schema, then compare state and event views after each user workflow. A finalized receipt, semantic execution result and authoritative readback are all required; a wallet popup or browser status alone is not sufficient.
+## Current status
+
+Fresh 61997 deployment and E2E evidence: **NOT STARTED — PRE_DEPLOY GATE**.
+
+Local Direct Mode and live schema checks are supporting evidence only; they do
+not substitute for the new network's receipts, consensus, semantic execution
+or authoritative readbacks.

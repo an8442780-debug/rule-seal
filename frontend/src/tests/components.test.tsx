@@ -272,7 +272,7 @@ describe('Mounted Page Components & User Workflows', () => {
     const mockWallet = {
       connected: true,
       address: '0x1111111111111111111111111111111111111111',
-      chainId: 61999,
+      chainId: 61997,
       provider: { request: vi.fn() } as any,
       providerName: 'MetaMask',
       isCorrectChain: true,
@@ -302,7 +302,7 @@ describe('Mounted Page Components & User Workflows', () => {
     const mockWallet = {
       connected: true,
       address: '0x1111111111111111111111111111111111111111',
-      chainId: 61999,
+      chainId: 61997,
       provider: { request: vi.fn() } as any,
       providerName: 'MetaMask',
       isCorrectChain: true,
@@ -351,7 +351,7 @@ describe('Mounted Page Components & User Workflows', () => {
     const mockWallet = {
       connected: true,
       address: '0x1111111111111111111111111111111111111111',
-      chainId: 61999,
+      chainId: 61997,
       provider: { request: vi.fn() } as any,
       providerName: 'MetaMask',
       isCorrectChain: true,
@@ -402,7 +402,7 @@ describe('Mounted Page Components & User Workflows', () => {
     const mockWallet = {
       connected: true,
       address: '0x1111111111111111111111111111111111111111',
-      chainId: 61999,
+      chainId: 61997,
       provider: { request: vi.fn() } as any,
       providerName: 'MetaMask',
       isCorrectChain: true,

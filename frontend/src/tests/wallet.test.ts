@@ -2,6 +2,15 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { getWalletState, selectWalletView, walletService } from '../services/walletService.ts';
 
 describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
+  it('does not enable a write binding on the former Studionet chain', async () => {
+    const address = '0x1111111111111111111111111111111111111111';
+    const provider = { request: vi.fn(async ({ method }: { method: string }) =>
+      method === 'eth_requestAccounts' || method === 'eth_accounts' ? [address] : '0xf22f') };
+    await walletService.connectProvider({ info: { uuid: 'old-chain', name: 'OKX Wallet', icon: '', rdns: 'com.okex.wallet' }, provider });
+    expect(getWalletState().phase).toBe('WRONG_CHAIN');
+    expect(getWalletState().writeClientBinding).toBeNull();
+    expect(selectWalletView(getWalletState()).canWrite).toBe(false);
+  });
   it('does not invent MetaMask from an OKX compatibility provider', () => {
     const cleanup = walletService.initEIP6963();
     const request = vi.fn();
@@ -225,7 +234,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
     const mockAccounts = ['0x1111111111111111111111111111111111111111'];
     const mockRequest = vi.fn().mockImplementation(async ({ method }) => {
       if (method === 'eth_requestAccounts' || method === 'eth_accounts') return mockAccounts;
-      if (method === 'eth_chainId') return '0xf22f'; // 61999 in hex
+      if (method === 'eth_chainId') return '0xf22d'; // 61997 in hex
       return null;
     });
 
@@ -248,7 +257,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
     const state = walletService.getState();
     expect(state.connected).toBe(true);
     expect(state.address).toBe(mockAccounts[0]);
-    expect(state.chainId).toBe(61999);
+    expect(state.chainId).toBe(61997);
     expect(state.isCorrectChain).toBe(true);
     expect(state.providerName).toBe('OKX Wallet');
   });
@@ -265,7 +274,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
 
     const mockRequest = vi.fn().mockImplementation(async ({ method }) => {
       if (method === 'eth_requestAccounts' || method === 'eth_accounts') return mockAccounts;
-      if (method === 'eth_chainId') return '0xf22f';
+      if (method === 'eth_chainId') return '0xf22d';
       return null;
     });
 
@@ -291,7 +300,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
     expect(getWalletState().phase).toBe('WRONG_CHAIN');
     expect(getWalletState().writeClientBinding).toBeNull();
 
-    listeners.chainChanged('0xf22f');
+    listeners.chainChanged('0xf22d');
     expect(getWalletState().phase).toBe('CONNECTED');
     expect(getWalletState().writeClientBinding?.provider).toBe(mockDetail.provider);
 
@@ -343,7 +352,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
     });
 
     const updatedState = walletService.getState();
-    expect(updatedState.chainId).toBe(61999);
+    expect(updatedState.chainId).toBe(61997);
     expect(updatedState.isCorrectChain).toBe(true);
   });
 
@@ -365,7 +374,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
     const address = '0x1111111111111111111111111111111111111111';
     const provider = { request: vi.fn(async ({ method }) => {
       if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [address];
-      if (method === 'eth_chainId') return '0xf22f';
+      if (method === 'eth_chainId') return '0xf22d';
       return null;
     }), on: vi.fn(), removeListener: vi.fn() };
     await walletService.connectProvider({
@@ -422,7 +431,7 @@ describe('WalletService (EIP-6963 Discovery & Session Gate)', () => {
         if (method === 'eth_requestAccounts' || method === 'eth_accounts') {
           return ['0x1111111111111111111111111111111111111111'];
         }
-        if (method === 'eth_chainId') return '0xf22f';
+        if (method === 'eth_chainId') return '0xf22d';
         return null;
       }),
       on: vi.fn((event, callback) => { listeners[event] = callback; }),

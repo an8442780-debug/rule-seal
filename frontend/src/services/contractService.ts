@@ -1,8 +1,10 @@
 import { createClient } from 'genlayer-js';
+import { studioDevnet } from 'genlayer-js/chains';
 import { CONTRACT_ADDRESS, STUDIONET_CONFIG } from '../config/chain.ts';
 import { sharedRpc } from './rpcClient.ts';
 import { walletService } from './walletService.ts';
 import { journalService } from './journalService.ts';
+import feeProfile from '../../fee-profile.json';
 import {
   CaseRecord,
   AssessmentRecord,
@@ -136,7 +138,7 @@ export class ContractService {
     account: `0x${string}`;
     provider: any;
   }) {
-    return createClient(params);
+    return createClient({ ...params, chain: studioDevnet });
   }
 
   public getConfiguredContractAddress(): string {
@@ -399,6 +401,36 @@ export class ContractService {
       throw new Error('WALLET_WRITE_BINDING_UNAVAILABLE');
     }
 
+    const client = this.createWriteClient({
+      endpoint: STUDIONET_CONFIG.rpcUrl,
+      account: writeBinding.address as `0x${string}`,
+      provider: writeBinding.provider,
+    });
+    const profileEntry = feeProfile.methods[method as keyof typeof feeProfile.methods];
+    if (!profileEntry) throw new Error(`FEE_PROFILE_METHOD_MISSING: ${method}`);
+
+    // Read current fee policy through the SDK, then pass its returned values
+    // unchanged to the wallet write. This is a read-only pre-sign operation.
+    const rotationsPerRound = BigInt(profileEntry.rotationsPerRound);
+    const feeEstimate = await client.estimateTransactionFees({
+      ...profileEntry,
+      rotations: [rotationsPerRound],
+    });
+
+    const postEstimateState = walletService.getWalletState();
+    const postEstimateBinding = postEstimateState.writeClientBinding;
+    if (
+      postEstimateState.phase !== 'CONNECTED' ||
+      !postEstimateState.connected ||
+      !postEstimateState.isCorrectChain ||
+      postEstimateState.provider !== writeBinding.provider ||
+      postEstimateState.address?.toLowerCase() !== writeBinding.address.toLowerCase() ||
+      postEstimateBinding?.provider !== writeBinding.provider ||
+      postEstimateBinding?.address.toLowerCase() !== writeBinding.address.toLowerCase()
+    ) {
+      throw new Error('WALLET_WRITE_BINDING_CHANGED');
+    }
+
     const opId = `op-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const pendingOp: PendingOperation = {
       id: opId,
@@ -416,18 +448,16 @@ export class ContractService {
 
     let txHash: string;
     try {
-      // Blocker 1: Must pass selected EIP-1193 provider directly
-      const client = this.createWriteClient({
-        endpoint: STUDIONET_CONFIG.rpcUrl,
-        account: writeBinding.address as `0x${string}`,
-        provider: writeBinding.provider,
-      });
-
+      // Blocker 1: Must pass selected EIP-1193 provider directly.
       txHash = await client.writeContract({
         address: targetAddress,
         functionName: method,
         args,
         value: 0n,
+        fees: {
+          distribution: feeEstimate.distribution,
+          feeValue: feeEstimate.feeValue,
+        },
       });
     } catch (err: any) {
       const rejected = err?.code === 4001 || err?.cause?.code === 4001;

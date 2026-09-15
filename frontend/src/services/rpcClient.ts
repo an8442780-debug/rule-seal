@@ -1,4 +1,6 @@
-import { createClient } from 'genlayer-js';
+import { createClient, isSuccessful } from 'genlayer-js';
+import { ExecutionResult } from 'genlayer-js/types';
+import { studioDevnet } from 'genlayer-js/chains';
 import { STUDIONET_CONFIG, CONTRACT_ADDRESS } from '../config/chain.ts';
 
 interface CacheEntry {
@@ -18,6 +20,7 @@ export class RpcClient {
 
   private constructor() {
     this.client = createClient({
+      chain: studioDevnet,
       endpoint: STUDIONET_CONFIG.rpcUrl,
     });
   }
@@ -167,19 +170,17 @@ export class RpcClient {
   public async getTransactionOutcome(hash: string): Promise<{ transaction: any; status: string; execution: string }> {
     const transaction = await this.client.getTransaction({ hash });
     const status = (transaction?.statusName || transaction?.status_name || transaction?.status || '').toString().toUpperCase();
-    let execution = (
+    const executionName = (
       transaction?.txExecutionResultName ||
       transaction?.tx_execution_result_name ||
       transaction?.execution_result ||
       ''
     ).toString().toUpperCase();
-
-    if (!execution && status === 'FINALIZED') {
-      const leader = transaction?.consensus_data?.leader_receipt?.find?.((receipt: any) => receipt?.mode === 'leader');
-      const leaderExecution = (leader?.execution_result || '').toString().toUpperCase();
-      const resultStatus = (leader?.result?.status || '').toString().toUpperCase();
-      if (leaderExecution === 'SUCCESS' && resultStatus === 'RETURN') execution = 'FINISHED_WITH_RETURN';
-      if (leaderExecution === 'ERROR' || resultStatus === 'ERROR') execution = 'FINISHED_WITH_ERROR';
+    let execution = executionName;
+    if (status === 'FINALIZED' && isSuccessful(transaction)) {
+      execution = ExecutionResult.FINISHED_WITH_RETURN;
+    } else if (executionName === ExecutionResult.FINISHED_WITH_ERROR) {
+      execution = ExecutionResult.FINISHED_WITH_ERROR;
     }
 
     return { transaction, status, execution };

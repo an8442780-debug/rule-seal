@@ -182,7 +182,7 @@ export const App: React.FC = () => {
               <p style={{ fontSize: '13px', margin: 0 }}>
                 {recoveryError || <>
                 Found {pendingOps.length} pending operation(s) recorded in your local recovery journal prior to session reload.
-                Operations must be reconciled against the Studionet RPC to confirm finality before re-attempting.
+                Operations must be reconciled against the Studio Next preview RPC to confirm finality before re-attempting.
                 </>}
               </p>
             </div>

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "network": "studio-dev",
+  "chainId": 61997,
+  "source": "conservative-bootstrap-from-v0.6-rc5-policy; replace with measured RuleSeal Studio observations before POST_DEPLOY_TEST acceptance",
+  "headroom": 1.25,
+  "deploy": {
+    "leaderTimeunitsAllocation": "125",
+    "validatorTimeunitsAllocation": "250",
+    "executionBudgetPerRound": "31250000000000000",
+    "rotationsPerRound": "3"
+  },
+  "methods": {
+    "create_case": { "leaderTimeunitsAllocation": "125", "validatorTimeunitsAllocation": "250", "executionBudgetPerRound": "31250000000000000", "rotationsPerRound": "3" },
+    "freeze_case": { "leaderTimeunitsAllocation": "125", "validatorTimeunitsAllocation": "250", "executionBudgetPerRound": "31250000000000000", "rotationsPerRound": "3" },
+    "assess_case": { "leaderTimeunitsAllocation": "125", "validatorTimeunitsAllocation": "250", "executionBudgetPerRound": "31250000000000000", "rotationsPerRound": "3" },
+    "retry_unresolved": { "leaderTimeunitsAllocation": "125", "validatorTimeunitsAllocation": "250", "executionBudgetPerRound": "31250000000000000", "rotationsPerRound": "3" },
+    "create_successor": { "leaderTimeunitsAllocation": "125", "validatorTimeunitsAllocation": "250", "executionBudgetPerRound": "31250000000000000", "rotationsPerRound": "3" },
+    "activate_integration": { "leaderTimeunitsAllocation": "125", "validatorTimeunitsAllocation": "250", "executionBudgetPerRound": "31250000000000000", "rotationsPerRound": "3" }
+  }
+}

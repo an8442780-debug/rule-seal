@@ -6,9 +6,9 @@ RuleSeal freezes an activity date and regulatory reference, then asks independen
 
 ## Development status
 
-RuleSeal is deployed on Studionet with a public production application. Its contract source, deployment, validator results, authoritative readbacks, wallet journeys and release assets are recorded in the verification documents.
+RuleSeal is being re-bound to the Studio Dev preview network (chain `61997`). The existing Studionet release is historical and is not evidence for this network migration. Fresh deployment, validator results, authoritative readbacks, wallet journeys and release assets must be recorded before the migrated release is promoted.
 
-Verified links: [Live app](https://rule-seal.vercel.app) · [Studionet contract](https://explorer-studio.genlayer.com/address/0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb) · [Deployment transaction](https://explorer-studio.genlayer.com/tx/0x92dd901676060279683a5628394c6afd9fc99516790376e3ce502ac1467b2106) · [Studio evidence](docs/STUDIONET-EVIDENCE.md)
+Target links after fresh release: [Live app](https://rule-seal.vercel.app) · [Studio Dev Explorer](https://explorer-studio-dev.genlayer.com/) · [Studio Dev evidence](docs/STUDIONET-EVIDENCE.md)
 
 ## Trust problem
 
@@ -54,16 +54,16 @@ Writes use only the wallet provider and account explicitly selected after chain 
 Use the existing configured Python 3.13/GenLayer environment and a Node version compatible with the locked Vite dependency.
 
 ```powershell
-py -3.13 -m pytest -q -p no:cacheprovider
-genvm-lint lint contracts\rule_seal.py
-genvm-lint validate contracts\rule_seal.py
+& E:\Genlayer-Tools\studio-next-toolchain\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider
+& E:\Genlayer-Tools\studio-next-toolchain\.venv\Scripts\genvm-lint.exe check contracts\rule_seal.py
+& E:\Genlayer-Tools\studio-next-toolchain\.venv\Scripts\genvm-lint.exe validate contracts\rule_seal.py
 Set-Location frontend
 npm test -- --run
 npm run build
 npm run dev
 ```
 
-Without `VITE_CONTRACT_ADDRESS` the app is unconfigured. For RuleSeal builds, set it to the verified Studionet address `0x785bbfD7eb3de51Fc9548D31b38813CB40c258Fb`. Keep secrets out of frontend configuration.
+Without `VITE_CONTRACT_ADDRESS` the app is unconfigured. For the migrated release, set it only to the freshly verified Studio Dev contract address on chain `61997`; never copy the invalidated Studionet address. Keep secrets out of frontend configuration.
 
 ## Evidence and limits
 
@@ -71,7 +71,7 @@ See [Verification](docs/VERIFICATION.md), [Deployment](docs/DEPLOYMENT.md), [Stu
 
 Scope is section 71.1, FAA Order JO 7400.11 and activity dates 2000-01-01 through 2035-12-31. There are three total assessments, not three retries after an initial attempt; retry reservation requires a one-hour cooldown. New nonces cannot bypass duplicate fingerprints.
 
-Browser journals are local metadata, not canonical state. Studionet state/account availability is not guaranteed and upgrade authority is privileged. Local PASS does not prove live finality, source parity, wallet E2E, accessibility or release readiness.
+Browser journals are local metadata, not canonical state. Studio Dev preview state/account availability is not guaranteed and upgrade authority is privileged. Local PASS does not prove live finality, source parity, wallet E2E, accessibility or release readiness.
 
 ## Security boundaries
 

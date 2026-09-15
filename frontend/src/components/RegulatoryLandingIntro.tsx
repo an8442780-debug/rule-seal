@@ -89,7 +89,7 @@ export const RegulatoryLandingIntro: React.FC = () => {
           <h3>Create and assess your case</h3>
           <p>Only detected wallets appear in the picker. If your wallet is missing, unlock and update its extension, then reload this page. MetaMask must support wallet discovery; compatibility aliases from other extensions are not listed as MetaMask.</p>
           <ol>
-            <li>Select <strong>Connect Wallet</strong>, then explicitly choose a detected MetaMask, OKX Wallet or Rabby. Writes require the correct Studionet network and spendable GEN. Never provide a seed phrase or private key to this page.</li>
+            <li>Select <strong>Connect Wallet</strong>, then explicitly choose a detected MetaMask, OKX Wallet or Rabby. Writes require the correct Studio Next preview network and spendable GEN. Never provide a seed phrase or private key to this page.</li>
             <li>Open <strong>Case Creator &amp; Lifecycle</strong>. Enter the activity date and retain the client nonce, then choose <strong>Create Draft Case</strong> and sign. Record the case ID returned after verification. A new nonce cannot bypass duplicate case inputs.</li>
             <li>With that case selected, return to <strong>Case Creator &amp; Lifecycle</strong> and choose <strong>Freeze Case for Resolver Assessment</strong>. Only its owner can freeze it; frozen inputs cannot be edited.</li>
             <li>Open <strong>Resolver Consensus</strong> and choose <strong>Execute Validator Assessment</strong>. A resolver requests evaluation; it does not choose the result. Return to <strong>Public Evidence Lookup</strong> to inspect the recorded assessment.</li>
@@ -120,7 +120,7 @@ export const RegulatoryLandingIntro: React.FC = () => {
           </p>
           <p>
             Source unavailability and consensus rejection are different. Rejection does not itself change a case to UNRESOLVED: read the actual case state.
-            An exhausted UNRESOLVED case cannot create a successor or evade its limit with another nonce. Studionet data may be reset, and contract upgrade authority remains privileged.
+            An exhausted UNRESOLVED case cannot create a successor or evade its limit with another nonce. Studio Next preview data may be reset, and contract upgrade authority remains privileged.
           </p>
         </div>
       </details>

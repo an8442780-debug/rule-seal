@@ -24,10 +24,16 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
   function setupWrite(submit = vi.fn().mockResolvedValue(hash)) {
     const provider = { request: vi.fn() };
     vi.spyOn(walletService, 'getWalletState').mockReturnValue({ phase: 'CONNECTED', connected: true,
-      address: sender, chainId: 61999, provider, providerName: 'OKX Wallet', isCorrectChain: true,
+      address: sender, chainId: 61997, provider, providerName: 'OKX Wallet', isCorrectChain: true,
       error: null, writeClientBinding: { provider, address: sender } });
     vi.spyOn(contractService, 'getConfiguredContractAddress').mockReturnValue(`0x${'3'.repeat(40)}`);
-    vi.spyOn(contractService, 'createWriteClient').mockReturnValue({ writeContract: submit } as any);
+    vi.spyOn(contractService, 'createWriteClient').mockReturnValue({
+      estimateTransactionFees: vi.fn().mockResolvedValue({
+        distribution: { leaderTimeunitsAllocation: 125n, validatorTimeunitsAllocation: 250n, rotations: [0n, 0n, 0n] },
+        feeValue: 123n,
+      }),
+      writeContract: submit,
+    } as any);
     vi.spyOn(sharedRpc, 'getTransactionOutcome').mockResolvedValue({ transaction: {}, status: 'FINALIZED', execution: 'FINISHED_WITH_RETURN' });
     vi.spyOn(contractService, 'getCaseByNonce').mockResolvedValue({ case_id: 'test-case', state: 'DRAFT', owner: sender,
       client_nonce: 'nonce', part: '71', section: '71.1', activity_date: '2025-10-01', standard_designation_hint: 'FAA Order JO 7400.11' } as any);
@@ -80,7 +86,7 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
     await expect(create(progress)).rejects.toThrow('AUTHORITATIVE_READBACK_FAILED');
     expect(progress).toHaveBeenLastCalledWith('RECONCILIATION_REQUIRED', expect.objectContaining({ txHash: hash }));
     expect(progress.mock.calls.some(([phase]) => phase === 'SUCCESS')).toBe(false);
-    expect(journalService.getPendingOperations()[0]).toMatchObject({ txHash: hash, sender, chainId: 61999 });
+    expect(journalService.getPendingOperations()[0]).toMatchObject({ txHash: hash, sender, chainId: 61997 });
     expect(submit).toHaveBeenCalledOnce();
   });
 
@@ -144,7 +150,7 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
   it('refuses recovery under a different chain or contract without reading state', async () => {
     setupWrite();
     const base = { id: 'test', type: 'create_case', timestamp: Date.now(), status: 'SUBMITTED' as const,
-      sender, chainId: 61999, contractAddress: `0x${'3'.repeat(40)}`, params: { clientNonce: 'nonce' }, txHash: hash };
+      sender, chainId: 61997, contractAddress: `0x${'3'.repeat(40)}`, params: { clientNonce: 'nonce' }, txHash: hash };
     await expect(contractService.verifyPendingOperation({ ...base, chainId: 1 })).resolves.toBe(false);
     await expect(contractService.verifyPendingOperation({ ...base, contractAddress: `0x${'5'.repeat(40)}` })).resolves.toBe(false);
     expect(contractService.getCaseByNonce).not.toHaveBeenCalled();
@@ -253,7 +259,7 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
   it('reconciles the canonical BOUND_TO_CASE integration readback without resubmitting', async () => {
     const pending = {
       id: 'integration-op', type: 'activate_integration', timestamp: Date.now(), status: 'SUBMITTED' as const,
-      sender, chainId: 61999, contractAddress: `0x${'3'.repeat(40)}`, txHash: hash,
+      sender, chainId: 61997, contractAddress: `0x${'3'.repeat(40)}`, txHash: hash,
       params: { namespace: '  ruleseal-web-e2e  ', caseId: 'REAL-000005' },
     };
     vi.spyOn(contractService, 'getConfiguredContractAddress').mockReturnValue(`0x${'3'.repeat(40)}`);
@@ -277,7 +283,7 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
       phase: 'CONNECTED',
       connected: true,
       address: mockAddress,
-      chainId: 61999,
+      chainId: 61997,
       provider: mockProvider as any,
       providerName: 'OKX Wallet',
       isCorrectChain: true,
@@ -288,6 +294,10 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
     const transactionHash = `0x${'a'.repeat(64)}`;
     const mockWriteContract = vi.fn().mockResolvedValue(transactionHash);
     const createClientSpy = vi.spyOn(contractService, 'createWriteClient').mockReturnValue({
+      estimateTransactionFees: vi.fn().mockResolvedValue({
+        distribution: { leaderTimeunitsAllocation: 125n, validatorTimeunitsAllocation: 250n, rotations: [0n, 0n, 0n] },
+        feeValue: 123n,
+      }),
       writeContract: mockWriteContract,
     } as any);
     vi.spyOn(contractService, 'getConfiguredContractAddress').mockReturnValue(
@@ -320,6 +330,28 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
     );
     expect(res.txHash).toBe(transactionHash);
     expect(res.caseId).toBe('REAL-000001');
+    expect(mockWriteContract).toHaveBeenCalledWith(expect.objectContaining({ fees: expect.objectContaining({ feeValue: 123n }) }));
+  });
+
+  it('aborts before journaling when the selected account changes during fee estimation', async () => {
+    const provider = { request: vi.fn() };
+    const alternate = `0x${'6'.repeat(40)}`;
+    vi.spyOn(walletService, 'getWalletState')
+      .mockReturnValueOnce({ phase: 'CONNECTED', connected: true, address: sender, chainId: 61997, provider,
+        providerName: 'OKX Wallet', isCorrectChain: true, error: null, writeClientBinding: { provider, address: sender } } as any)
+      .mockReturnValueOnce({ phase: 'CONNECTED', connected: true, address: sender, chainId: 61997, provider,
+        providerName: 'OKX Wallet', isCorrectChain: true, error: null, writeClientBinding: { provider, address: sender } } as any)
+      .mockReturnValue({ phase: 'CONNECTED', connected: true, address: alternate, chainId: 61997, provider,
+        providerName: 'OKX Wallet', isCorrectChain: true, error: null, writeClientBinding: { provider, address: alternate } } as any);
+    const estimate = vi.fn().mockResolvedValue({ distribution: {}, feeValue: 1n });
+    const submit = vi.fn().mockResolvedValue(hash);
+    vi.spyOn(contractService, 'createWriteClient').mockReturnValue({ estimateTransactionFees: estimate, writeContract: submit } as any);
+    vi.spyOn(contractService, 'getConfiguredContractAddress').mockReturnValue(`0x${'3'.repeat(40)}`);
+
+    await expect(create()).rejects.toThrow('WALLET_WRITE_BINDING_CHANGED');
+    expect(estimate).toHaveBeenCalledOnce();
+    expect(submit).not.toHaveBeenCalled();
+    expect(journalService.getPendingOperations()).toEqual([]);
   });
 
   it('aborts before journal or write when account removal occurs during chain switching', async () => {
@@ -389,13 +421,11 @@ describe('ContractService (Domain Client, Write Routing & Receipt Classifier)', 
     ).rejects.toThrow('TRANSACTION_UNKNOWN_EXECUTION_RESULT');
   });
 
-  it('accepts the current Studionet leader-receipt return shape', async () => {
+  it('accepts the current Studio Dev normalized execution result', async () => {
     const rawClient = sharedRpc.getRawClient();
     vi.spyOn(rawClient, 'getTransaction').mockResolvedValue({
       statusName: 'FINALIZED',
-      consensus_data: {
-        leader_receipt: [{ mode: 'leader', execution_result: 'SUCCESS', result: { status: 'return' } }],
-      },
+      txExecutionResultName: 'FINISHED_WITH_RETURN',
     });
 
     await expect(contractService.waitForFinalizedTransaction('0xstudio-shape')).resolves.toMatchObject({

@@ -1,6 +1,8 @@
 # RuleSeal recovery
 
-These procedures define the recovery boundaries. Studio rollback, cooldown rejection, same-source upgrade preservation and production-wallet journal recovery have live evidence.
+These procedures define the recovery boundaries. The migrated Studio Dev release
+must re-establish live rollback, cooldown rejection, same-source upgrade
+preservation and production-wallet journal evidence on chain `61997`.
 
 ## Pending transaction
 
@@ -16,7 +18,12 @@ If persistence fails after submission, keep the page open and copy the displayed
 
 Foreground polling stops after at most 24 reads or five minutes. A hidden page makes no further polls and ends at its deadline. An unavailable read stops verification rather than silently submitting another write. Physical-network budgets, cancellation of underlying SDK requests and full reload-budget enforcement still require completion and measurement before release.
 
-The production integration recovery proved that method-specific expectations must use the contract's canonical stored state. A stale frontend expectation of `ACTIVE` falsely produced `RECONCILIATION_REQUIRED` even though the transaction was finalized successfully; the final matcher requires `BOUND_TO_CASE`. Reload reconciliation then used the retained sender, namespace, case and hash, performed authoritative readback, cleared the journal and submitted no new write.
+Method-specific expectations must use the contract's canonical stored state. A
+stale frontend expectation of `ACTIVE` can falsely produce
+`RECONCILIATION_REQUIRED` even though a transaction finalized successfully;
+the matcher requires `BOUND_TO_CASE`. Reload reconciliation uses the retained
+sender, namespace, case and hash, performs authoritative readback, clears the
+journal only after verification and submits no new write.
 
 ## RPC and source failures
 
@@ -40,8 +47,17 @@ Consensus rejection is not a stored UNRESOLVED outcome. Read actual state before
 
 ## Upgrade and authority loss
 
-Root Slot authorization does not prove storage compatibility. Review the exact replacement source and layout before any upgrade. RuleSeal rehearsed the approved source against its acceptance contract only after meaningful case, lineage and integration state existed, then verified finality, semantic upgrade success, exact source parity, unchanged authority and before/after state readbacks. A future source-changing upgrade requires fresh source, compatibility and state-preservation verification.
+Root Slot authorization does not prove storage compatibility. Review the exact
+replacement source and layout before any upgrade. The migrated release must
+verify finality, semantic upgrade success, exact source parity, unchanged
+authority and before/after state readbacks on its fresh 61997 deployment. A
+future source-changing upgrade requires fresh source, compatibility and
+state-preservation verification.
 
-RuleSeal is independent and migrates no old state. Never modify the original project's deployment/release.
+RuleSeal migrates no old state. The prior Studionet deployment is historical
+and invalidated for this release; never use its state or receipts as 61997
+evidence.
 
-Lost upgrader access has no demonstrated bypass. A Studionet reset cannot be repaired from browser metadata. Any replacement requires its own review, deployment, wiring and new evidence, not an automatic retry.
+Lost upgrader access has no demonstrated bypass. A Studio Dev preview reset
+cannot be repaired from browser metadata. Any replacement requires its own
+review, deployment, wiring and new evidence, not an automatic retry.

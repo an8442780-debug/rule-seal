@@ -1,14 +1,16 @@
+import { studioDevnet } from 'genlayer-js/chains';
+
 export const STUDIONET_CONFIG = {
-  chainId: 61999,
-  chainIdHex: '0xf22f',
-  chainName: 'GenLayer Studionet',
-  rpcUrl: 'https://studio.genlayer.com/api',
+  chainId: studioDevnet.id,
+  chainIdHex: `0x${studioDevnet.id.toString(16)}`,
+  chainName: studioDevnet.name,
+  rpcUrl: studioDevnet.rpcUrls.default.http[0],
   nativeCurrency: {
     name: 'GEN',
     symbol: 'GEN',
     decimals: 18,
   },
-  blockExplorerUrls: ['https://explorer-studio.genlayer.com'],
+  blockExplorerUrls: ['https://explorer-studio-dev.genlayer.com/'],
 };
 
 export const STUDIONET_EXPLORER = STUDIONET_CONFIG.blockExplorerUrls[0];

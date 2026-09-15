@@ -1,98 +1,79 @@
-# RuleSeal RPC Budget
+# RuleSeal RPC Budgets
 
-RPC_BUDGET_REVISION: EXACT_RELEASE_BOUND
-OFFICIAL_DOCS_CHECKED: https://docs.genlayer.com/developers/intelligent-contracts/testing and https://docs.genlayer.com/developers/intelligent-contracts/tools/genlayer-studio/limitations checked 2026-09-09
-STUDIO_SCOPE: APPLICABLE
-FRONTEND_SCOPE: APPLICABLE
+RPC_BUDGET_REVISION: TARGET_61997_PRE_DEPLOY
+OFFICIAL_DOCS_CHECKED: https://docs.genlayer.com/developers/intelligent-contracts/testing and https://docs.genlayer.com/developers/intelligent-contracts/tools/genlayer-studio/limitations (2026-09-15)
+TARGET_NETWORK: Studio Dev preview
+TARGET_CHAIN_ID: 61997
+TARGET_RPC: https://studio-dev.genlayer.com/api
 
-Studio and frontend accounting are independent. Neither evidence set substitutes for the other.
+Studio and frontend accounting are independent. Neither evidence set
+substitutes for the other. The old Studionet ledger is invalidated and is not
+carried into this target release.
 
-## STUDIO RPC MEASUREMENT CAPABILITY PROBE
+## Studio RPC measurement capability probe
 
-STUDIO_CAPABILITY_PROBE_STATUS: COMPLETE
+STUDIO_CAPABILITY_PROBE_STATUS: COMPLETE_BEFORE_ACCEPTANCE_WRITES
 STUDIO_MEASUREMENT_MODE: OBSERVABLE_ACTION_LEDGER
-STUDIO_MEASUREMENT_TIMING: PRE_E2E
-STUDIO_CAPABILITY_PROBE_AT: 2026-09-08T19:01:07.931Z
-STUDIO_FIRST_OBSERVABLE_UI_ACTION_AT: 2026-09-08T19:01:26.817Z
-STUDIO_FIRST_ACTION_AT: 2026-09-08T19:50:03.128817Z
-STUDIO_ACCEPTANCE_DEPLOYMENT_AT: 2026-09-08T19:50:03.128817Z
-STUDIO_E2E_STARTED_AT: 2026-09-08T19:56:03.604279Z
-STUDIO_CAPABILITY_TOOL_OR_API: Studio browser capability inventory and supported browser/tab API
-STUDIO_CAPABILITY_CHECK: Checked for physical request events, performance/request logs, proxy logs, or another exact per-request counter
-STUDIO_CAPABILITY_RESULT: Physical request telemetry is not exposed; transaction hashes, terminal states, receipts, logs and authoritative readbacks are observable
+STUDIO_CAPABILITY_PROBE_AT: 2026-09-15T08:30:20.7722088Z
+STUDIO_CAPABILITY_PROBE_FINISHED_AT: 2026-09-15T08:30:23.9199840Z
+STUDIO_FIRST_ACCEPTANCE_ACTION_AT: NOT_STARTED
+STUDIO_CAPABILITY_TOOL_OR_API: E:\Genlayer-Tools\studio-next-toolchain\studio-next.ps1 plus scripts/self-test.mjs; network info, account show and read-only RPC checks
+STUDIO_CAPABILITY_CHECK: checked for physical request events, performance or
+proxy request logs, and an exact per-request counter
+STUDIO_CAPABILITY_RESULT: physical request telemetry is unavailable; operation
+IDs, transaction hashes, terminal states, receipts, logs and authoritative
+readbacks are observable
 STUDIO_PHYSICAL_COUNT_SOURCE: NOT_APPLICABLE
-STUDIO_PHYSICAL_COUNT_CLAIM: NONE
 STUDIO_REPLAY_FOR_MEASUREMENT: NO
 
-The probe completed before any deployment or lifecycle write. It confirmed that physical request telemetry was unavailable and locked the observable action ledger as the measurement mode.
+No deployment or lifecycle write is allowed until this probe is recorded with
+its exact timestamp, tool/API, checks, result and first-action timestamp.
 
-## STUDIO RPC BUDGET MATRIX
+## Studio RPC budget matrix
 
-STUDIO_MATRIX_STATUS: COMPLETE
+| Operation | Trigger | Maximum | Polling / timeout | Retry rule | Stop condition | Evidence |
+|---|---|---:|---|---|---|---|
+| Account/network check | once before deployment | 2 actions | none | none | actor7, chain61997, funded and accessible | probe ledger |
+| Schema probe | exact reviewed bytes | 1 action | none | 0 | 23 methods or stop | schema output |
+| Source readback | after deployment | 1 read | none | 1 only for explicit 429/5xx after 2s | exact byte hash or stop | code hash |
+| Acceptance deployment | approved exact source | 1 submission | 2.5s→10s, max 24 attempts / 5m | no resubmit | FINALIZED or terminal failure | hash, receipt, consensus, code |
+| Each lifecycle write | named method | 1 submission | 2.5s→10s, max 24 attempts / 5m | no automatic retry | FINALIZED + semantic result | hash and pre/post readback |
+| Authoritative readback bundle | after terminal write | 3 reads | no polling | 1 transient read retry | expected state or stop | captured readback |
+| Per-case receipt/evidence bundle | terminal write | 12 observable actions | no polling beyond row | 1 transient retry | complete or stop | ledger row |
 
-| Operation/case | RPC method or Studio action | Trigger | Planned maximum | Poll interval / attempts | Retry/cooldown | Terminal condition | Transaction count | Evidence |
-|---|---|---|---:|---|---|---|---:|---|
-| Account/network check | Studio account and Studionet UI | once before deployment | 2 actions | none | none | locked funded account visible | 0 | action ledger |
-| Schema probe | Studio source load/schema | exact reviewed bytes | 1 action | none | 0 | 23 methods visible or stop | 0 | Studio schema UI |
-| Source readback | current code RPC/readback | after deployment | 1 read | none | 1 only on explicit 429/5xx after 2s | raw-byte hash matches or stop | 0 | code hash record |
-| Acceptance deployment | Deploy exact LF source | release authorization | 1 submission | 2.5s to 10s / max 24 over 5m | no resubmit | FINALIZED or terminal failure/timeout | 1 | hash, receipt, consensus, readback |
-| Each unique lifecycle write | named Studio method | required matrix row | 1 submission | 2.5s to 10s / max 24 over 5m | no automatic retry | FINALIZED plus semantic success or expected rejection | 1 | hash and pre/post readback |
-| Authoritative verification | view methods | after each terminal write | 3 reads | none | 0 | expected state/value or stop | 0 | captured readback |
-| Per-case verification bundle | receipt, consensus, readbacks | terminal boundary | 12 reads/actions | none | 1 transient retry | complete evidence or stop | 0 | evidence row |
+Hard stops: wrong network, duplicate write, unknown receipt after 5 minutes,
+polling beyond 24 attempts, budget breach, missing semantic result, missing
+consensus/finality or missing authoritative readback.
 
-Hard stops: wrong network, duplicate write, unknown receipt after 5 minutes, retry beyond the row, budget breach, missing semantic result, missing consensus/finality, or missing authoritative readback.
+## Frontend RPC budget matrix
 
-## STUDIO RPC BUDGET EVIDENCE
+| Journey | Request source | Maximum logical calls | Polling / timeout | Retry/cancel | Terminal condition |
+|---|---|---:|---|---|---|
+| Bootstrap | shared read client | 8 | none | two 429/5xx retries | first 10s complete |
+| Public lookup | shared read client | 10 | none | 1s/3s + ≤200ms jitter | requested records displayed |
+| Create case | selected-provider write + readback | 30 | 2.5s→10s, max 24 / 5m | no write retry; abort on hidden/unmount/deadline | finality, success, identity readback |
+| Freeze case | selected-provider write + readback | 30 | 2.5s→10s, max 24 / 5m | no write retry; bounded teardown | FROZEN readback |
+| Assessment | selected-provider write + readback | 30 | 2.5s→10s, max 24 / 5m | no write retry; bounded teardown | semantic result and assessment readback |
+| Integration | selected-provider write + readback | 30 | 2.5s→10s, max 24 / 5m | no write retry; bounded teardown | scoped integration readback |
+| Successor | selected-provider write + readback | 30 | 2.5s→10s, max 24 / 5m | no write retry; bounded teardown | reciprocal lineage readback |
+| Reload reconciliation | shared read client | 12 | bounded existing-hash checks / 30s | never resubmit | retain until authoritative readback |
 
-STUDIO_EVIDENCE_STATUS: COMPLETE
-STUDIO_ACTION_LEDGER_STATUS: COMPLETE
+The shared read client owns 10-second cache, in-flight deduplication and
+bounded transport retry. The write client is created only from the exact
+selected EIP-1193 provider and current account. Hidden tabs pause polling.
+Semantic failures are never transport-retried.
+
+## Target evidence status
+
+STUDIO_EVIDENCE_STATUS: NOT_STARTED_FOR_61997
+STUDIO_ACTION_LEDGER_STATUS: READY_NOT_STARTED
 STUDIO_PHYSICAL_REQUESTS: NOT_APPLICABLE
-STUDIO_ACTIONS: 156
-STUDIO_TRANSACTIONS: 25
-STUDIO_TRANSACTION_HASHES: 25 listed in docs/STUDIONET-EVIDENCE.md
-STUDIO_STATUS_POLL_ATTEMPTS: 69
-STUDIO_TERMINAL_RECEIPT_READS: 25
-STUDIO_AUTHORITATIVE_READBACKS: 37
+STUDIO_TRANSACTIONS: 0
+STUDIO_STATUS_POLL_ATTEMPTS: 0
+STUDIO_TERMINAL_RECEIPT_READS: 0
+STUDIO_AUTHORITATIVE_READBACKS: 0
 STUDIO_RETRIES: 0
 STUDIO_DUPLICATE_TRANSACTIONS: 0
-STUDIO_MATRIX_VARIANCE: NOT_APPLICABLE live label not established; one bounded attempt failed closed after three validator rotations; both premature retry attempts were retained as cooldown rollbacks; the two eligible reservations, third assessment, and cap rollback were completed on the original case
 
-These are observable action-ledger counts, not physical network-request counts. `STUDIO_ACTIONS` is the auditable aggregate of the four recorded ledgers: `STUDIO_TRANSACTIONS` (25 submissions) + `STUDIO_STATUS_POLL_ATTEMPTS` (69 bounded observations) + `STUDIO_TERMINAL_RECEIPT_READS` (25) + `STUDIO_AUTHORITATIVE_READBACKS` (37) = 156. It excludes passive rendering and UI navigation. All attempted writes, including semantic errors, are retained. No blind resubmission occurred.
-
-## FRONTEND RPC BUDGET MATRIX
-
-FRONTEND_MATRIX_STATUS: COMPLETE
-MULTI_CLIENT_JUSTIFICATION: One shared read client owns cache, deduplication and bounded retry; a separate write client is created only from the exact selected EIP-1193 provider and active account so an ambient provider cannot replace the signing boundary.
-
-| Screen/workflow | Request source | RPC method | Trigger | Cache key / TTL | In-flight dedupe | Invalidation | Poll interval / attempts | Retry/backoff/cancel | Planned maximum | Transaction count | Terminal/readback condition |
-|---|---|---|---|---|---|---|---|---|---:|---:|---|
-| Initial bootstrap | shared read client | configured bootstrap reads | first mount | method+args+contract / 10s | identical reads join | deployment/config change | none | two 429/5xx retries; abort on invalidation | 8 | 0 | first 10s complete |
-| Public lookup | shared read client | case and assessment views | explicit lookup | method+args+contract / 10s | identical reads join | related write | none | 1s/3s plus jitter; cancel on invalidation | 10 | 0 | requested records displayed |
-| Create case | selected-provider write plus shared readback | create_case and case views | explicit submit | reads / 10s | one active operation | case methods after write | 2.5s-10s / 24 | no write retry; hidden/unmount/deadline abort | 30 | 1 | finalized success and identity readback |
-| Freeze case | selected-provider write plus shared readback | freeze_case and case view | explicit submit | reads / 10s | one active operation | case method after write | 2.5s-10s / 24 | no write retry; bounded teardown | 30 | 1 | FROZEN readback |
-| Assessment | selected-provider write plus shared readback | assess_case and assessment views | explicit submit | reads / 10s | one active operation | case/assessment after write | 2.5s-10s / 24 | no write retry; bounded teardown | 30 | 1 | finality, execution and assessment readback |
-| Integration | selected-provider write plus shared readback | activate_integration and integration view | explicit submit | reads / 10s | one active operation | integration after write | 2.5s-10s / 24 | no write retry; bounded teardown | 30 | 1 | scoped integration readback |
-| Successor | selected-provider write plus shared readback | create_successor and case views | explicit submit | reads / 10s | one active operation | predecessor/successor after write | 2.5s-10s / 24 | no write retry; bounded teardown | 30 | 1 | reciprocal lineage readback |
-| Reload reconciliation | shared read client | transaction and method-specific views | pending journal load | operation identity / no stale success cache | one reconciler | terminal cleanup only | bounded existing-hash checks | never resubmit; abort after 30s | 12 | 0 | retain until authoritative readback |
-
-Read retries apply only to explicit HTTP 429/5xx and use 1s/3s plus at most 200ms jitter. Hidden tabs pause polling. Semantic failures are not transport-retried.
-
-## FRONTEND RPC BUDGET EVIDENCE
-
-FRONTEND_EVIDENCE_STATUS: COMPLETE
-
-Automated evidence covers in-flight deduplication, 10s cache, invalidation, bounded backoff, abort/cancellation, Strict Mode safety, measured journey metrics, 24-poll ceiling, hidden-tab pause, retained transaction hash, reconciliation and no automatic resubmit. The production measurement is bound to the release identified in `docs/VERIFICATION.md`.
-
-| Screen/workflow | Request source/method | Actual requests | Cache hit/miss | In-flight dedupe | Poll attempts | Retry/delay | Invalidations | Readback calls | Actual transactions | Variance/result |
-|---|---|---:|---|---|---:|---|---|---:|---:|---|
-| Existing-hash integration reconciliation | transaction status plus `get_integration` | 7 logical calls: public lookup 6, integration readback 1 | cold misses; no stale-success cache | one reconciler | 0 new polls after terminal status was independently known | 0 | terminal cleanup only | 1 | 0 | PASS; canonical `BOUND_TO_CASE`; pending journal became `[]`; no resubmit |
-| Exact-release create/freeze/assess journey | transaction polling plus case/assessment views | 73 cumulative logical calls before browser recovery: public lookup 28, integration 3, auditor 2, transaction poll 33, case detail 7 | safe 10s cache active; consequential readbacks bypassed | single-flight writes | 33 across four terminal transactions; each write stayed below 24 | 0 | case/assessment/integration/event methods after writes | 7 recorded case/readback calls plus final replacement-tab case and assessment reads | 4 | PASS with disclosed negative row below; successful case `REAL-000006` reached DRAFT, FROZEN, then LOCKED |
-| Duplicate-fingerprint negative | `create_case` | included in cumulative row | no cache used for guard | one write only | 8 | 0 | none after terminal failure | 0 | 1 | Expected finalized execution failure; submitted date remained `2025-10-01`; no state mutation and no blind retry |
-| Corrected fresh create | `create_case` plus `get_case_by_nonce` | included in cumulative row | authoritative miss | one write only | 8 | 0 | case/event indexes | 1 | 1 | FINALIZED/SUCCESS; `REAL-000006`, date `2025-11-01`, DRAFT |
-| Freeze | `freeze_case` plus `get_case` | included in cumulative row | authoritative miss | one write only | 8 | 0 | case/events | 1 | 1 | FINALIZED/SUCCESS; FROZEN readback; success modal auto-closed |
-| Assessment | `assess_case` plus case/assessment reads | included in cumulative row | authoritative misses | one write only | 9 | 0 | case/assessment/events | 3 | 1 | FINALIZED/MAJORITY_AGREE/leader SUCCESS; LOCKED and assessment readback |
-| Replacement-tab public verification | public case and assessment views | 9 logical calls: public lookup 7, case detail 1, assessment 1 | cold misses | identical reads joined | 0 | 0 | none | 2 | 0 | PASS after browser-control recovery; visible LOCKED result and official evidence |
-
-Logical-call evidence is the application-owned local aggregate, not a claim about physical browser transport events. There were zero 429/5xx retries, zero automatic write retries and zero duplicate submissions. The four writes comprise one retained fail-closed negative and three distinct successful lifecycle writes. Each individual journey stayed within its numeric matrix maximum.
-
-Release closes only when the exact deployed frontend stays within every journey maximum with no duplicate writes, no provider reacquisition and complete finality/execution/readback evidence. This exact release satisfies that condition.
+Counts will be updated only from the fresh 61997 ledger and bound to its exact
+evidence revision. Old-network counts are not valid for this release.

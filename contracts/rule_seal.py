@@ -1,11 +1,13 @@
-# v0.1.0
-# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+# v0.3.0
+# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
 
-from genlayer import *
+import genlayer as gl
+from genlayer import u32
+from genlayer.storage import TreeMap, DynArray
 import hashlib
 import json
 import re
-from datetime import datetime
+import datetime
 
 
 TITLE_ALLOWLIST = 14
@@ -63,8 +65,8 @@ def _require(condition: bool, message: str) -> None:
 
 
 def _transaction_time() -> tuple[int, str]:
-    timestamp = gl.message_raw["datetime"]
-    epoch = int(datetime.fromisoformat(timestamp.replace("Z", "+00:00")).timestamp())
+    timestamp = gl.message.raw["datetime"]
+    epoch = int(datetime.datetime.fromisoformat(timestamp.replace("Z", "+00:00")).timestamp())
     return epoch, timestamp
 
 
@@ -79,7 +81,7 @@ def _is_valid_iso_date(date_str: str) -> bool:
     if not (MIN_DATE <= date_str <= MAX_DATE):
         return False
     try:
-        datetime.strptime(date_str, "%Y-%m-%d")
+        datetime.datetime.strptime(date_str, "%Y-%m-%d")
         return True
     except ValueError:
         return False
@@ -160,7 +162,7 @@ def _valid_assessment(value: dict) -> bool:
     return True
 
 
-class RuleSealContract(gl.Contract):
+class RuleSealContract(gl.contract.Contract):
     cases: TreeMap[str, str]
     case_by_fingerprint: TreeMap[str, str]
     case_by_nonce: TreeMap[str, str]
@@ -352,7 +354,7 @@ class RuleSealContract(gl.Contract):
 
             document_numbers = []
             if edition_match is not None and source_date_match is not None:
-                source_publication_date = datetime.strptime(source_date_match.group(1), "%b. %d, %Y").strftime("%Y-%m-%d")
+                source_publication_date = datetime.datetime.strptime(source_date_match.group(1), "%b. %d, %Y").strftime("%Y-%m-%d")
                 docket_token = docket_matches[0]
                 fr_query_url = f"https://www.federalregister.gov/api/v1/documents.json?conditions[cfr][title]=14&conditions[cfr][part]={part}&conditions[term]={docket_token}&conditions[type][]=RULE&conditions[publication_date][gte]={source_publication_date}&conditions[publication_date][lte]={source_publication_date}&per_page=4&order=newest"
                 fr_search_text, source_error = _fetch(fr_query_url, 12000)
@@ -497,7 +499,7 @@ Return exactly one JSON object with:
             except Exception:
                 return False
 
-        assessment = gl.vm.run_nondet_unsafe(evaluate, validate)
+        assessment = gl.vm.run_nondet(evaluate, validate)
         _require(_valid_assessment(assessment), "INVALID_ASSESSMENT")
 
         current_attempt = case["attempt_count"] + 1
