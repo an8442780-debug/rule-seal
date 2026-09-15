@@ -3,7 +3,7 @@
   "network": "studio-dev",
   "chainId": 61997,
   "source": "conservative-bootstrap-from-v0.6-rc5-policy; replace with measured RuleSeal Studio observations before POST_DEPLOY_TEST acceptance",
-  "headroom": 1.25,
+  "headroom": "1.25",
   "deploy": {
     "leaderTimeunitsAllocation": "125",
     "validatorTimeunitsAllocation": "250",
