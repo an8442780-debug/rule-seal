@@ -52,8 +52,13 @@ The 61997 Studio gate is complete for POST_DEPLOY_TEST: deployment receipt,
 FINALIZED status, semantic execution success, consensus/finality, exact
 deployed-source parity, upgrader readback, lifecycle readbacks, integration
 advancement, source-preserving upgrade rehearsal and the observable Studio RPC
-ledger are recorded in [Studio evidence](STUDIONET-EVIDENCE.md). GitHub/Vercel
-source parity and production wallet E2E remain downstream release gates.
+ledger are recorded in [Studio evidence](STUDIONET-EVIDENCE.md). Per-operation
+receipt, finality, semantic, consensus and authoritative-readback binding is
+retained in
+[the reconciliation ledger](STUDIO-OPERATION-RECONCILIATION-61997.md), whose
+blob hash and exact HEAD must be bound by the POST_DEPLOY_TEST re-review
+package. GitHub/Vercel source parity and production wallet E2E remain
+downstream release gates.
 
 ## Evidence rule
 

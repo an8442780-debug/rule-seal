@@ -30,6 +30,11 @@ tool path after PRE_DEPLOY approval. A transaction is accepted only after
 FINALIZED status, semantic execution success, consensus/finality and
 authoritative readback were independently recorded.
 
+The per-operation finalized receipt and readback reconciliation is retained in
+`docs/STUDIO-OPERATION-RECONCILIATION-61997.md`. The original tool journals are
+preserved as raw operation history; their reservation status is not used as the
+final receipt verdict.
+
 ## Upgrade rehearsal
 
 - Operation: source-preserving replacement with the canonical LF source bytes

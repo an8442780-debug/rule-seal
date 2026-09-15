@@ -49,9 +49,10 @@ including diagnostics and pre-broadcast rejections.
 ## Retained operation evidence
 
 Accepted deployment and lifecycle operation hashes are retained in the private
-toolchain journals and the release evidence package. The package includes the
-deployment, case creation/freeze/assessment, successor, integration, and
-source-preserving upgrade operations. Failed CLI diagnostics, the old-network
+toolchain journals and independently reconciled in
+`docs/STUDIO-OPERATION-RECONCILIATION-61997.md`. That ledger matches every
+positive hash to a finalized receipt, semantic result, consensus/finality and a
+method-specific authoritative readback. Failed CLI diagnostics, the old-network
 deployment, cooldown/authorization rejections, and malformed attempts are
 retained for traceability but are excluded from positive acceptance claims.
 
