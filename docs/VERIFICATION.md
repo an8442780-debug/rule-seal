@@ -30,9 +30,9 @@ npm run build
 
 The current migration candidate passes 26 Direct Mode tests with six disclosed
 expected mock warnings, GenVM lint/semantic validation with 23 methods (16
-view, 7 write), 108 frontend tests, TypeScript and Vite build. These are
-network-independent or target-configuration checks; they do not approve a
-61997 deployment.
+view, 7 write), 108 frontend tests, TypeScript and Vite build. The pinned
+toolchain venv is required for Direct Mode; the ambient Python installation may
+attempt an unavailable public GenVM download.
 
 ## Compatibility checks
 
@@ -48,11 +48,12 @@ network-independent or target-configuration checks; they do not approve a
 
 ## Fresh Studio Dev gate
 
-The following remain pending until the new network release is authorized and
-executed: deployment receipt, FINALIZED status, semantic execution success,
-consensus/finality, exact deployed-source parity, upgrader readback, lifecycle
-readbacks, upgrade rehearsal, complete Studio RPC ledger, GitHub/Vercel source
-parity and production wallet E2E.
+The 61997 Studio gate is complete for POST_DEPLOY_TEST: deployment receipt,
+FINALIZED status, semantic execution success, consensus/finality, exact
+deployed-source parity, upgrader readback, lifecycle readbacks, integration
+advancement, source-preserving upgrade rehearsal and the observable Studio RPC
+ledger are recorded in [Studio evidence](STUDIONET-EVIDENCE.md). GitHub/Vercel
+source parity and production wallet E2E remain downstream release gates.
 
 ## Evidence rule
 

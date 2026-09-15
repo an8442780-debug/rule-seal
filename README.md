@@ -6,7 +6,7 @@ RuleSeal freezes an activity date and regulatory reference, then asks independen
 
 ## Development status
 
-RuleSeal is being re-bound to the Studio Dev preview network (chain `61997`). The existing Studionet release is historical and is not evidence for this network migration. Fresh deployment, validator results, authoritative readbacks, wallet journeys and release assets must be recorded before the migrated release is promoted.
+RuleSeal is released against the Studio Dev preview network (chain `61997`). The existing Studionet release is historical and is not evidence for this network migration. The fresh Studio deployment, validator results and authoritative readbacks are recorded; GitHub/Vercel parity and production wallet journeys remain the final release gate.
 
 Target links after fresh release: [Live app](https://rule-seal.vercel.app) · [Studio Dev Explorer](https://explorer-studio-dev.genlayer.com/) · [Studio Dev evidence](docs/STUDIONET-EVIDENCE.md)
 
@@ -67,7 +67,7 @@ Without `VITE_CONTRACT_ADDRESS` the app is unconfigured. For the migrated releas
 
 ## Evidence and limits
 
-See [Verification](docs/VERIFICATION.md), [Deployment](docs/DEPLOYMENT.md), [Studio evidence](docs/STUDIONET-EVIDENCE.md) and [Recovery](docs/RECOVERY.md).
+See [Verification](docs/VERIFICATION.md), [Deployment](docs/DEPLOYMENT.md), [Studio evidence](docs/STUDIONET-EVIDENCE.md), [RPC budgets](docs/RPC-BUDGET.md) and [Recovery](docs/RECOVERY.md).
 
 Scope is section 71.1, FAA Order JO 7400.11 and activity dates 2000-01-01 through 2035-12-31. There are three total assessments, not three retries after an initial attempt; retry reservation requires a one-hour cooldown. New nonces cannot bypass duplicate fingerprints.
 
