@@ -36,6 +36,7 @@ export const App: React.FC = () => {
   const [walletState, setWalletState] = useState<WalletState>(walletService.getState());
   const [discoveredProviders, setDiscoveredProviders] = useState<EIP6963ProviderDetail[]>([]);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [activeLayer, setActiveLayer] = useState<'landing' | 'workspace'>('landing');
   const [activeTab, setActiveTab] = useState<ActiveTab>('lookup');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [activeCase, setActiveCase] = useState<CaseRecord | null>(null);
@@ -166,57 +167,75 @@ export const App: React.FC = () => {
       />
 
       <main style={{ paddingBottom: '40px' }} role="main">
-        <DeploymentBanner />
+        {/* Layer 1: product landing, evidence briefing and documentation */}
+        <RegulatoryLandingIntro onEnterWorkspace={() => setActiveLayer('workspace')} />
 
-        {/* 4-Pillar Regulatory Dossier Intro Briefing */}
-        <RegulatoryLandingIntro />
-
-        {/* Journal Recovery Notice */}
-        {(pendingOps.length > 0 || recoveryError) && (
-          <div className="banner banner-warning" role="alert" style={{ marginBottom: '20px' }}>
+        {/* Layer 2: the existing contract-backed workspace */}
+        <section
+          className={`workspace-layer ${activeLayer === 'workspace' ? 'workspace-layer-visible' : 'workspace-layer-hidden'}`}
+          aria-hidden={activeLayer !== 'workspace'}
+          inert={activeLayer !== 'workspace' ? true : undefined}
+          aria-label="RuleSeal workflow workspace"
+        >
+          <div className="workspace-layer-header">
             <div>
-              <div style={{ fontWeight: 700, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>⚠</span>
-                <span>Pending Operation Recovery Notice</span>
-              </div>
-              <p style={{ fontSize: '13px', margin: 0 }}>
-                {recoveryError || <>
-                Found {pendingOps.length} pending operation(s) recorded in your local recovery journal prior to session reload.
-                Operations must be reconciled against the Studio Next preview RPC to confirm finality before re-attempting.
-                </>}
-              </p>
+              <span className="workspace-eyebrow">Layer 02 / Execution workspace</span>
+              <h2>Run a verified regulatory workflow</h2>
+              <p>Move from public evidence lookup to owner actions, validator consensus, integration binding and audit review.</p>
             </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-              <button
-                className="btn btn-secondary btn-sm"
-                disabled={reconciling}
-                onClick={async () => {
-                  setReconciling(true);
-                  try {
-                    const result = await journalService.reconcilePendingOperations(
-                      undefined,
-                      (operation) => contractService.verifyPendingOperation(operation)
-                    );
-                    setPendingOps(result.reconciled);
-                    setRecoveryError('');
-                    if (result.finalized.length > 0) {
-                      handleRefreshActiveCase();
-                    }
-                  } catch {
-                    setRecoveryError('Verification could not finish. Keep the existing operation and restore storage or network access before checking again. Do not resubmit.');
-                  } finally {
-                    setReconciling(false);
-                  }
-                }}
-              >
-                {reconciling ? 'Reconciling...' : 'Reconcile with Chain'}
-              </button>
-            </div>
+            <button className="btn btn-secondary" type="button" onClick={() => setActiveLayer('landing')}>
+              Back to overview
+            </button>
           </div>
-        )}
 
-        {/* Primary WAI-ARIA Tab Navigation */}
-        <nav className="tabs" role="tablist" aria-label="RuleSeal Workflows">
+          {/* Journal Recovery Notice */}
+          {(pendingOps.length > 0 || recoveryError) && (
+            <div className="banner banner-warning" role="alert" style={{ marginBottom: '20px' }}>
+              <div>
+                <div style={{ fontWeight: 700, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>⚠</span>
+                  <span>Pending Operation Recovery Notice</span>
+                </div>
+                <p style={{ fontSize: '13px', margin: 0 }}>
+                  {recoveryError || <>
+                  Found {pendingOps.length} pending operation(s) recorded in your local recovery journal prior to session reload.
+                  Operations must be reconciled against the Studio Dev preview RPC to confirm finality before re-attempting.
+                  </>}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  disabled={reconciling}
+                  onClick={async () => {
+                    setReconciling(true);
+                    try {
+                      const result = await journalService.reconcilePendingOperations(
+                        undefined,
+                        (operation) => contractService.verifyPendingOperation(operation)
+                      );
+                      setPendingOps(result.reconciled);
+                      setRecoveryError('');
+                      if (result.finalized.length > 0) {
+                        handleRefreshActiveCase();
+                      }
+                    } catch {
+                      setRecoveryError('Verification could not finish. Keep the existing operation and restore storage or network access before checking again. Do not resubmit.');
+                    } finally {
+                      setReconciling(false);
+                    }
+                  }}
+                >
+                  {reconciling ? 'Reconciling...' : 'Reconcile with Chain'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <DeploymentBanner />
+
+          {/* Primary WAI-ARIA Tab Navigation */}
+          <nav className="tabs" role="tablist" aria-label="RuleSeal Workflows">
           {TABS.map((tab, idx) => {
             const isActive = activeTab === tab.id;
             return (
@@ -239,10 +258,10 @@ export const App: React.FC = () => {
               </button>
             );
           })}
-        </nav>
+          </nav>
 
-        {/* Tab Content Panels with synchronized role="tabpanel" */}
-        <div id="tab-panels-region">
+          {/* Tab Content Panels with synchronized role="tabpanel" */}
+          <div id="tab-panels-region">
           <div id="panel-lookup" role="tabpanel" aria-labelledby="tab-lookup" hidden={activeTab !== 'lookup'} tabIndex={activeTab === 'lookup' ? 0 : -1}>
             {activeTab === 'lookup' && (
               <PublicLookup selectedCaseId={selectedCaseId} onSelectCase={handleSelectCase} />
@@ -314,7 +333,8 @@ export const App: React.FC = () => {
               <AuditorView />
             )}
           </div>
-        </div>
+          </div>
+        </section>
       </main>
 
       {/* Modals */}

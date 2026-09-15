@@ -65,6 +65,8 @@ describe('Mounted Page Components & User Workflows', () => {
       expect(guide?.textContent).toContain('does not supersede the predecessor');
       expect(guide?.textContent).toContain('three total assessment attempts');
       expect(guide?.textContent).toContain('Reconcile with Chain');
+      expect(container?.querySelector('.landing-logo-core img')?.getAttribute('src')).toBe('/rule-seal-logo.svg');
+      expect(container?.querySelectorAll('.landing-resource-strip a')).toHaveLength(4);
       expect(read).not.toHaveBeenCalled();
       expect(request).not.toHaveBeenCalled();
     } finally { (window as any).ethereum = original; }
@@ -499,6 +501,7 @@ describe('Mounted Page Components & User Workflows', () => {
     });
 
     expect(container?.textContent).toContain('RuleSeal');
+    expect(container?.querySelector('.workspace-layer')?.getAttribute('aria-hidden')).toBe('true');
     expect(container?.textContent).toContain('Public Evidence Lookup');
     const tabs = Array.from(container?.querySelectorAll('[role="tab"]') || []);
     expect(tabs).toHaveLength(6);
@@ -519,5 +522,16 @@ describe('Mounted Page Components & User Workflows', () => {
     expect(container?.textContent).toContain('Case Creator & Lifecycle Workbench');
     expect(document.getElementById('panel-creator')?.hidden).toBe(false);
     expect(document.getElementById('panel-lookup')?.hidden).toBe(true);
+
+    const enterWorkspace = Array.from(container?.querySelectorAll('button') || []).find(
+      (b) => b.textContent?.includes('Enter the workspace')
+    );
+    await act(async () => { enterWorkspace?.click(); });
+    expect(container?.querySelector('.workspace-layer')?.getAttribute('aria-hidden')).toBe('false');
+    const backToOverview = Array.from(container?.querySelectorAll('button') || []).find(
+      (b) => b.textContent?.includes('Back to overview')
+    );
+    await act(async () => { backToOverview?.click(); });
+    expect(container?.querySelector('.workspace-layer')?.getAttribute('aria-hidden')).toBe('true');
   });
 });

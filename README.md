@@ -21,6 +21,15 @@ An owner, resolver or frontend must not be able to substitute an edition, effect
 3. Integrator explicitly binds a caller-scoped checklist namespace to a LOCKED case.
 4. Auditor reads cases, authority records, assessments, events and lineage. Public reads do not require a wallet after deployment.
 
+## Frontend surface
+
+The web app is intentionally split into two layers:
+
+1. **Overview layer** — a calm, documentation-first landing surface with the RuleSeal mark, the trust problem, official-source/consensus/lineage foundations, and direct links to verification, Studio evidence, recovery guidance and the Explorer.
+2. **Workspace layer** — the contract-backed workflows: Public Evidence Lookup, Case Creator & Lifecycle, Resolver Consensus, Checklist Integrator, Successor Wizard and Auditor Hub.
+
+Entering the workspace changes presentation state only; it does not connect a wallet, request accounts or submit an RPC write. The existing wallet, journal, finality, semantic execution and authoritative-readback controls remain the same in both layers.
+
 ## Lifecycle
 
 ```text

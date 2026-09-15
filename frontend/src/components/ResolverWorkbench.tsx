@@ -82,7 +82,7 @@ export const ResolverWorkbench: React.FC<ResolverWorkbenchProps> = ({
         {!walletState.connected && (
           <div className="banner banner-info" role="status">
             <div>
-              <strong>Wallet Disconnected:</strong> Connect your wallet to submit validator assessment transactions on GenLayer Studio Next preview.
+              <strong>Wallet Disconnected:</strong> Connect your wallet to submit validator assessment transactions on GenLayer Studio Dev preview.
             </div>
           </div>
         )}

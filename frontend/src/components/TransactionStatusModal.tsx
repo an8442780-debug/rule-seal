@@ -8,7 +8,7 @@ const COPY: Record<TxStep, [string, string]> = {
   IDLE: ['Ready', 'No transaction is in progress.'],
   WAITING_FOR_WALLET: ['Confirm in your wallet', 'Review the request in your selected wallet and confirm or reject it.'],
   SUBMITTED: ['Transaction submitted', 'Your wallet returned a transaction hash. The result is not yet verified.'],
-  WAITING_FOR_FINALITY: ['Waiting for finality', 'Studio Next preview is processing the transaction. Submission or acceptance is not final success.'],
+  WAITING_FOR_FINALITY: ['Waiting for finality', 'Studio Dev preview is processing the transaction. Submission or acceptance is not final success.'],
   VERIFYING_EXECUTION: ['Verifying execution', 'The transaction is finalized. Its execution result is being checked.'],
   VERIFYING_READBACK: ['Verifying the result', 'The finalized execution is being compared with authoritative contract state.'],
   SUCCESS: ['Transaction complete', 'Finality, successful execution and the resulting contract state were verified. Opening the updated record…'],
@@ -90,7 +90,7 @@ export const TransactionStatusModal: React.FC<Props> = ({ isOpen, step, detail, 
         {detail?.message && <p>{detail.message}</p>}
         {detail?.persistenceDegraded && <p role="alert">Keep this page open and copy the hash now. Browser storage could not retain it reliably; do not reload or submit again.</p>}
         {hash && <div className="transaction-hash">
-          <span>Transaction hash · Studio Next preview</span>
+          <span>Transaction hash · Studio Dev preview</span>
           <code>{hash}</code>
           <div className="transaction-actions">
             <button type="button" className="btn btn-secondary" onClick={async () => {

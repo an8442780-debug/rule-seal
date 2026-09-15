@@ -110,7 +110,7 @@ export const WalletModal: React.FC<WalletModalProps> = ({
         </div>
 
         <p style={{ fontSize: '13px', color: 'var(--rs-text-muted)', marginBottom: '18px', lineHeight: 1.5 }}>
-          Choose a wallet detected in this browser. RuleSeal supports MetaMask, OKX Wallet and Rabby on GenLayer Studio Next preview. You approve connection and signing in your wallet.
+          Choose a wallet detected in this browser. RuleSeal supports MetaMask, OKX Wallet and Rabby on GenLayer Studio Dev preview. You approve connection and signing in your wallet.
         </p>
 
         <div>
