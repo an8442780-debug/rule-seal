@@ -5,6 +5,14 @@ OFFICIAL_DOCS_CHECKED: https://docs.genlayer.com/developers/intelligent-contract
 TARGET_NETWORK: Studio Dev preview
 TARGET_CHAIN_ID: 61997
 TARGET_RPC: https://studio-dev.genlayer.com/api
+FRONTEND_SCOPE: APPLICABLE
+FRONTEND_MATRIX_STATUS: COMPLETE
+FRONTEND_EVIDENCE_STATUS: INCOMPLETE
+FRONTEND_SOURCE_REVISION: 98f3dfcf714637971c51f102c2bcad2108b43f11
+FRONTEND_CONTRACT_SOURCE_SHA256: FAE8EF0D956E06211E5E95A0EB7E15713D1E815B61E5E4E5820B1DC03247ADA4
+FRONTEND_TARGET_BINDING: chain 61997 / studioDevnet / https://studio-dev.genlayer.com/api
+
+MULTI_CLIENT_JUSTIFICATION: The two createClient calls are intentional and exhaustive. The singleton shared read client in frontend/src/services/rpcClient.ts is the only client for public reads, status polling, caching, deduplication and authoritative readback. The selected-provider write client in frontend/src/services/contractService.ts is created per immutable EIP-1193 provider/account binding so writes cannot use the shared read transport or ambient window provider. No other frontend module creates a GenLayer client; the separation prevents a write from bypassing exact wallet identity validation.
 
 Studio and frontend accounting are independent. Neither evidence set
 substitutes for the other. The old Studionet ledger is invalidated and is not
@@ -45,7 +53,7 @@ Hard stops: wrong network, duplicate write, unknown receipt after 5 minutes,
 polling beyond 24 attempts, budget breach, missing semantic result, missing
 consensus/finality or missing authoritative readback.
 
-## Frontend RPC budget matrix
+## FRONTEND RPC BUDGET MATRIX
 
 | Journey | Request source | Maximum logical calls | Polling / timeout | Retry/cancel | Terminal condition |
 |---|---|---:|---|---|---|
@@ -62,6 +70,19 @@ The shared read client owns 10-second cache, in-flight deduplication and
 bounded transport retry. The write client is created only from the exact
 selected EIP-1193 provider and current account. Hidden tabs pause polling.
 Semantic failures are never transport-retried.
+
+## FRONTEND RPC BUDGET EVIDENCE
+
+This implementation-stage artifact is bound to the exact source revision and
+Studio Dev target above. The matrix is complete and finite, but release
+measurement is intentionally incomplete before the fresh 61997 deployment and
+production Vercel E2E. At that later gate, each listed journey will record the
+actual logical adapter-call count, request source and method, cache hit/miss,
+in-flight deduplication, invalidation, retry count/delay, polling attempts,
+authoritative readback and transaction count. Logical adapter calls are not
+claimed to be physical HTTP requests; physical telemetry remains unavailable
+unless the runtime exposes it. No transaction or frontend production journey
+has been counted for this migration yet.
 
 ## Target evidence status
 
