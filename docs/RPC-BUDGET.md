@@ -11,6 +11,15 @@ FRONTEND_EVIDENCE_STATUS: INCOMPLETE
 FRONTEND_SOURCE_REVISION: b2f01fcd2193e2712fa0a841a77162942193e84e
 FRONTEND_CONTRACT_SOURCE_SHA256: FAE8EF0D956E06211E5E95A0EB7E15713D1E815B61E5E4E5820B1DC03247ADA4
 FRONTEND_TARGET_BINDING: chain 61997 / studioDevnet / https://studio-dev.genlayer.com/api
+FRONTEND_PACKAGE_REVISION_BINDING: EXTERNAL_PRE_DEPLOY_PACKAGE_AND_RECEIPT
+
+The frontend source revision above is the last revision that changed frontend
+source. Subsequent package corrections are documentation-only and do not alter
+the frontend tree. The exact containing package revision is therefore bound by
+the exact PRE_DEPLOY package and preflight receipt, which record this file's
+hash and the Git HEAD independently. A commit cannot embed its own commit hash
+without changing that hash; this explicit two-part binding avoids a false
+self-reference while preserving exact-source provenance.
 
 MULTI_CLIENT_JUSTIFICATION: The two createClient calls are intentional and exhaustive. The singleton shared read client in frontend/src/services/rpcClient.ts is the only client for public reads, status polling, caching, deduplication and authoritative readback. The selected-provider write client in frontend/src/services/contractService.ts is created per immutable EIP-1193 provider/account binding so writes cannot use the shared read transport or ambient window provider. No other frontend module creates a GenLayer client; the separation prevents a write from bypassing exact wallet identity validation.
 
